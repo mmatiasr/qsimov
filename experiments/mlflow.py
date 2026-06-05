@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import sys
 import mlflow
 import os
 import json
@@ -76,8 +77,10 @@ def export_active_run(directory):
 
 
 def run_script(command_as_list, experiment_dir):
+    if command_as_list[0] == "python":
+        command_as_list = [sys.executable] + command_as_list[1:]
     print("\n\nRunning {}\n\n".format(" ".join(command_as_list)), flush=True)
-    result = subprocess.run(command_as_list)
+    result = subprocess.run(command_as_list, env=os.environ.copy())
     if result.returncode != 0:
         # delete the experiment directory
         experiment_results_dir = get_or_make_export_directory(experiment_dir)
