@@ -118,16 +118,14 @@ def run_qsimov_linear(results_dir, split, args, train_x, train_y, test_x, test_y
         verbose=1,
     )
 
-    y_onehot = np.eye(N_CLASSES, dtype=np.float32)[train_y.astype(int)]
-
     t0 = time.time()
-    qls.fit(train_x, y_onehot, batch_size=BATCH_SIZE)
+    qls.fit(train_x, train_y, batch_size=BATCH_SIZE)
     train_time = time.time() - t0
 
     y_pred = qls.predict(test_x)
-    test_acc = float(np.mean(np.argmax(y_pred, axis=1) == test_y))
+    test_acc = float(np.mean(np.argmax(y_pred, axis=1) == np.argmax(test_y, axis=1)))
     y_pred_train = qls.predict(train_x)
-    train_acc = float(np.mean(np.argmax(y_pred_train, axis=1) == train_y))
+    train_acc = float(np.mean(np.argmax(y_pred_train, axis=1) == np.argmax(train_y, axis=1)))
 
     results = {
         "train_accuracy": train_acc,
