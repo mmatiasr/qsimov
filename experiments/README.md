@@ -1,0 +1,1 @@
+Here we have one folder per experiment, each with a main.py defining the experiment and a run_exports dir with the results of the experiment.

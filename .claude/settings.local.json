@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile experiments/initial_layer_sweep/train_keras_sweep.py)",
+      "Bash(python3 -m py_compile experiments/initial_layer_sweep/plot_sweep.py)",
+      "Bash(python3 -m py_compile experiments/initial_layer_sweep/main.py)",
+      "Bash(python3 -m py_compile experiments/cifar10_gradient_by_splits/keras_model_factory.py)",
+      "Bash(python3 -m py_compile experiments/cifar10_gradient_by_splits/train_keras_models.py)",
+      "Bash(python3 -m py_compile experiments/imagenet_subset_by_splits/train_keras_standard_finetune.py)",
+      "Bash(python3 -m py_compile experiments/imagenet_subset_by_splits/main.py)",
+      "Bash(python3 -m py_compile experiments/imagenet_continual_learning/plot_continual_learning.py)",
+      "Bash(python3 -m py_compile experiments/imagenet_continual_learning/main.py)",
+      "Bash(pip3 show *)",
+      "Bash(pip3 list *)"
+    ]
+  }
+}
