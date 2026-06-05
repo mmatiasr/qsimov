@@ -50,7 +50,7 @@ def _n_paths(path_selector):
 
 
 def save_gradient_results(name, model_name, model, history, results_dir):
-    name += "_qsimov_gradient"
+    name += "_qsimov"
     with open(f"{results_dir}/{name}_{model_name}_history.pkl", "wb") as f:
         pickle.dump(history.history, f)
     with open(f"{results_dir}/number_of_paths_{model_name}.txt", "w") as f:
