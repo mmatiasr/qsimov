@@ -54,6 +54,18 @@ def get_mnist_learning_rate_results_dir(framework, processor):
     return get_mnist_speed_loss_results_dir(framework, processor)
 
 
+def get_mnist_forgetting_results_dir(framework, processor):
+    framework_name = "tf_keras" if framework != "pytorch" else "pytorch"
+
+    return join_normalize_paths(
+        get_qsimov_results_dir(),
+        "mnist",
+        "forgetting",
+        framework_name,
+        processor,
+    )
+
+
 ###############################################################################
 # CIFAR10
 ###############################################################################
