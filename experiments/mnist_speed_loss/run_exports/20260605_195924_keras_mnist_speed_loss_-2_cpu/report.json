@@ -1,0 +1,46 @@
+{
+    "info": {
+        "artifact_uri": "file:///home/mati/TFG2.0/qsimov/mlruns/104962164185652957/1b2ff8f5a04f4c6c9300a08f077e4a8d/artifacts",
+        "end_time": null,
+        "experiment_id": "104962164185652957",
+        "lifecycle_stage": "active",
+        "run_id": "1b2ff8f5a04f4c6c9300a08f077e4a8d",
+        "run_name": "keras_mnist_speed_loss_-2_cpu",
+        "run_uuid": "1b2ff8f5a04f4c6c9300a08f077e4a8d",
+        "start_time": 1780682364800,
+        "status": "RUNNING",
+        "user_id": "Matias",
+        "git_commit": "852403ae94c6bcbaab1f1ab4b8ee322444e52ced"
+    },
+    "data": {
+        "metrics": {},
+        "params": {
+            "generated_data_dir": "/data/mnist",
+            "plot_2": "20260605_195924_keras_mnist_speed_loss_-2_cpu_mse_quarter_gradient_comparison_Train.html",
+            "keras_models_script": "/experiments/mnist_speed_loss/tf_keras/train_keras_models.py",
+            "plot_0": "20260605_195924_keras_mnist_speed_loss_-2_cpu_mse_half_gradient_comparison_Train.html",
+            "generated_results_dir": "/results/mnist/learning_rate_speed_loss/tf_keras/keras",
+            "plot_5": "20260605_195924_keras_mnist_speed_loss_-2_cpu_crossentropy_half_gradient_comparison_Test.html",
+            "experiment_execution": "/home/mati/TFG2.0/qsimov/experiments/mnist_speed_loss/main.py --processor cpu --framework keras --epochs 10 --initial-layer -2",
+            "keras_histories": "mse_half_modelhistory.pkl, mse_half_full_modelhistory.pkl, mse_quarter_modelhistory.pkl, mse_quarter_full_modelhistory.pkl, crossentropy_half_modelhistory.pkl, crossentropy_half_full_modelhistory.pkl, crossentropy_quarter_modelhistory.pkl, crossentropy_quarter_full_modelhistory.pkl",
+            "plot_7": "20260605_195924_keras_mnist_speed_loss_-2_cpu_crossentropy_quarter_gradient_comparison_Test.html",
+            "plot_3": "20260605_195924_keras_mnist_speed_loss_-2_cpu_mse_quarter_gradient_comparison_Test.html",
+            "qsimov_models_script": "/experiments/mnist_speed_loss/tf_keras/train_qsimov_models.py",
+            "generated_data_files": "test_x.npy, test_y.npy, train_x_0.npy, train_x_1.npy, train_x_2.npy, train_x_3.npy, train_y_0.npy, train_y_1.npy, train_y_2.npy, train_y_3.npy",
+            "plot_1": "20260605_195924_keras_mnist_speed_loss_-2_cpu_mse_half_gradient_comparison_Test.html",
+            "keras_models": "mse_half_modeltf, mse_half_full_modeltf, mse_quarter_modeltf, mse_quarter_full_modeltf, crossentropy_half_modeltf, crossentropy_half_full_modeltf, crossentropy_quarter_modeltf, crossentropy_quarter_full_modeltf",
+            "plots_script": "/experiments/mnist_speed_loss/speed_loss_plots.py",
+            "plot_4": "20260605_195924_keras_mnist_speed_loss_-2_cpu_crossentropy_half_gradient_comparison_Train.html",
+            "plot_6": "20260605_195924_keras_mnist_speed_loss_-2_cpu_crossentropy_quarter_gradient_comparison_Train.html",
+            "qsimov_histories": "qsimov_gradient_mse_half_history.pkl, qsimov_linear_mse_half_history.pkl, qsimov_gradient_mse_quarter_history.pkl, qsimov_linear_mse_quarter_history.pkl, qsimov_gradient_crossentropy_half_history.pkl, qsimov_gradient_crossentropy_quarter_history.pkl",
+            "data_generation_script": "/experiments/mnist_speed_loss/preprocess_data.py"
+        },
+        "tags": {
+            "mlflow.source.name": "/home/mati/TFG2.0/qsimov/experiments/mnist_speed_loss/main.py",
+            "mlflow.source.git.commit": "852403ae94c6bcbaab1f1ab4b8ee322444e52ced",
+            "mlflow.source.type": "LOCAL",
+            "mlflow.runName": "keras_mnist_speed_loss_-2_cpu",
+            "mlflow.user": "mati"
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "info": {
+        "artifact_uri": "file:///home/mati/TFG2.0/qsimov/mlruns/658037233230179319/3c47277b0f294c5884620ce6564ab62b/artifacts",
+        "end_time": null,
+        "experiment_id": "658037233230179319",
+        "lifecycle_stage": "active",
+        "run_id": "3c47277b0f294c5884620ce6564ab62b",
+        "run_name": "keras_mnist_learning_rate_-2_cpu",
+        "run_uuid": "3c47277b0f294c5884620ce6564ab62b",
+        "start_time": 1780733889153,
+        "status": "RUNNING",
+        "user_id": "Matias",
+        "git_commit": "bc51886612c55c5a28438c767e9fbf0fd004c61b"
+    },
+    "data": {
+        "metrics": {},
+        "params": {
+            "generated_data_dir": "/data/mnist",
+            "keras_models_script": "/experiments/mnist_speed_loss/tf_keras/train_keras_models.py",
+            "generated_results_dir": "/results/mnist/learning_rate_speed_loss/tf_keras/cpu",
+            "generated_plots": "20260606_101809_keras_mnist_learning_rate_-2_cpu_learning_rate_plot_by_epoch_test.html, 20260606_101809_keras_mnist_learning_rate_-2_cpu_learning_rate_plot_by_epoch_train.html, 20260606_101809_keras_mnist_learning_rate_-2_cpu_learning_rate_plot_by_learning_rate.html",
+            "experiment_execution": "/home/mati/TFG2.0/qsimov/experiments/mnist_learning_rate/main.py --processor cpu --framework keras --epochs 5 --initial-layer -2 --skip-base-models",
+            "keras_histories": "mse_half_model_history.pkl, mse_half_full_model_history.pkl, mse_quarter_model_history.pkl, mse_quarter_full_model_history.pkl, crossentropy_half_model_history.pkl, crossentropy_half_full_model_history.pkl, crossentropy_quarter_model_history.pkl, crossentropy_quarter_full_model_history.pkl",
+            "compute_metrics_script": "/experiments/mnist_learning_rate/train_keras_qsimov_models.py",
+            "generated_data_files": "test_x.npy, test_y.npy, train_x_0.npy, train_x_1.npy, train_x_2.npy, train_x_3.npy, train_y_0.npy, train_y_1.npy, train_y_2.npy, train_y_3.npy",
+            "keras_models": "mse_half_model_tf, mse_half_full_model_tf, mse_quarter_model_tf, mse_quarter_full_model_tf, crossentropy_half_model_tf, crossentropy_half_full_model_tf, crossentropy_quarter_model_tf, crossentropy_quarter_full_model_tf",
+            "plots_script": "/experiments/mnist_learning_rate/learning_rate_plots.py",
+            "data_generation_script": "/experiments/mnist_speed_loss/preprocess_data.py",
+            "generated_stats": "learning_rate_keras_partial_stats.pkl, learning_rate_keras_stats.pkl, learning_rate_qsimov_stats.pkl"
+        },
+        "tags": {
+            "mlflow.source.name": "/home/mati/TFG2.0/qsimov/experiments/mnist_learning_rate/main.py",
+            "mlflow.source.git.commit": "bc51886612c55c5a28438c767e9fbf0fd004c61b",
+            "mlflow.source.type": "LOCAL",
+            "mlflow.runName": "keras_mnist_learning_rate_-2_cpu",
+            "mlflow.user": "mati"
+        }
+    }
+}

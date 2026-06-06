@@ -1,0 +1,50 @@
+{
+    "info": {
+        "artifact_uri": "file:///home/mati/TFG2.0/qsimov/mlruns/127923150347330398/4231208147f2454e8988ad76321e6b57/artifacts",
+        "end_time": null,
+        "experiment_id": "127923150347330398",
+        "lifecycle_stage": "active",
+        "run_id": "4231208147f2454e8988ad76321e6b57",
+        "run_name": "keras_cifar_10_gradient_by_splits_lenet_-1_cpu",
+        "run_uuid": "4231208147f2454e8988ad76321e6b57",
+        "start_time": 1780732787532,
+        "status": "RUNNING",
+        "user_id": "Matias",
+        "git_commit": "bc51886612c55c5a28438c767e9fbf0fd004c61b"
+    },
+    "data": {
+        "metrics": {},
+        "params": {
+            "generated_data_dir": "/data/cifar10",
+            "initial_weights": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/initial_weights/lenet_weights.pkl",
+            "keras_models_script": "/experiments/cifar10_gradient_by_splits/train_keras_models.py",
+            "data_preparation_script": "/experiments/cifar10_gradient_by_splits/preprocess_data.py",
+            "model_summary": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/cpu/lenet_model_summary.txt",
+            "number_of_paths": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/cpu/number_of_paths_lenet.txt",
+            "generated_plots_dir": "/results/cifar10/gradient_by_splits/tf_keras/cpu",
+            "experiment_execution": "/home/mati/TFG2.0/qsimov/experiments/cifar10_gradient_by_splits/main.py --processor cpu --framework keras --model_name lenet --epochs 10 --splits 100 1000 5000 --initial-layer -1",
+            "initial_weights_path_selector_model": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/initial_weights/lenet_path_selector_model.tf",
+            "keras_histories": "100_split_lenet_history.pkl, 1000_split_lenet_history.pkl, 5000_split_lenet_history.pkl, full_dataset_lenet_history.pkl",
+            "path_selector_models": "100_split_path_selector_lenet_model.tf, 1000_split_path_selector_lenet_model.tf, 5000_split_path_selector_lenet_model.tf, full_dataset_path_selector_lenet_model.tf",
+            "qsimov_models_script": "/experiments/cifar10_gradient_by_splits/train_keras_qsimov_models.py",
+            "initial_weights_model": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/initial_weights/lenet_model.tf",
+            "path_selector_model_summary": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/cpu/lenet_path_selector_model_summary.txt",
+            "initialized_weights_dir": "/results/cifar10/gradient_by_splits/tf_keras/initial_weights",
+            "path_selector_histories": "100_split_path_selector_lenet_history.pkl, 1000_split_path_selector_lenet_history.pkl, 5000_split_path_selector_lenet_history.pkl, full_dataset_path_selector_lenet_history.pkl",
+            "path_selector_models_script": "/experiments/cifar10_gradient_by_splits/train_keras_models.py",
+            "keras_models": "100_split_lenet_model.tf, 1000_split_lenet_model.tf, 5000_split_lenet_model.tf, full_dataset_lenet_model.tf",
+            "plots_script": "/experiments/cifar10_gradient_by_splits/plot_gradient_by_splits.py",
+            "initialized_weights_script": "/experiments/cifar10_gradient_by_splits/keras_model_factory.py",
+            "qsimov_histories": "100_split_qsimov_lenet_history.pkl, 1000_split_qsimov_lenet_history.pkl, 5000_split_qsimov_lenet_history.pkl",
+            "initial_weights_path_selector": "/home/mati/TFG2.0/qsimov/results/cifar10/gradient_by_splits/tf_keras/initial_weights/lenet_path_selector_weights.pkl",
+            "plots": "20260606_095947_keras_cifar_10_gradient_by_splits_lenet_-1_cpu_cifar10_gradient_by_splits_lenet.html"
+        },
+        "tags": {
+            "mlflow.source.name": "/home/mati/TFG2.0/qsimov/experiments/cifar10_gradient_by_splits/main.py",
+            "mlflow.source.git.commit": "bc51886612c55c5a28438c767e9fbf0fd004c61b",
+            "mlflow.source.type": "LOCAL",
+            "mlflow.runName": "keras_cifar_10_gradient_by_splits_lenet_-1_cpu",
+            "mlflow.user": "mati"
+        }
+    }
+}
