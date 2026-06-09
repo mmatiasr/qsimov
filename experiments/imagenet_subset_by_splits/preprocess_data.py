@@ -11,7 +11,7 @@ SEED = 42
 
 # Each directory in the train.X* directories has 25 labels and 1300 images per
 # label. The val.X directory has 50 images per label.
-TRAIN_DIRS = ["train.X1", "train.X2", "train.X3", "train.X4"]
+TRAIN_DIRS = ["train.X1", "train.X2"]  # , "train.X3", "train.X4"]
 NUM_LABELS = 25 * len(TRAIN_DIRS)
 
 TRAIN_IMAGES_PER_LABEL = 1300

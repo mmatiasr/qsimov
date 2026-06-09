@@ -66,6 +66,13 @@ def get_mnist_forgetting_results_dir(framework, processor):
     )
 
 
+def get_cifar10_forgetting_results_dir(framework, processor):
+    framework_name = "tf_keras" if framework != "pytorch" else "pytorch"
+    return join_normalize_paths(
+        get_qsimov_results_dir(), "cifar10", "forgetting", framework_name, processor
+    )
+
+
 ###############################################################################
 # CIFAR10
 ###############################################################################
@@ -91,6 +98,8 @@ def get_cifar10_gradient_by_splits_results_initial_weights_dir():
         "tf_keras",
         "initial_weights",
     )
+
+
 
 
 ###############################################################################

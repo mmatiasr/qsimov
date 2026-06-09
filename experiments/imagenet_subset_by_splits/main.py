@@ -63,7 +63,6 @@ class GradientBySplitsParser(argparse.ArgumentParser):
         self.add_skip_models_argument()
         self.add_skip_path_selector_models_argument()
         self.add_skip_qsimov_argument()
-        self.add_skip_standard_finetune_argument()
         TrainQsimovModelsParser.add_initial_layer_argument(self)
         TrainModelsParser.add_splits_argument(self)
         TrainModelsParser.add_epochs_argument(self)
@@ -102,13 +101,6 @@ class GradientBySplitsParser(argparse.ArgumentParser):
             action="store_true",
             help="Skip generation of the qsimov models. This is useful if you"
             " want to run the experiments multiple times",
-        )
-
-    def add_skip_standard_finetune_argument(self):
-        self.add_argument(
-            "--skip-standard-finetune",
-            action="store_true",
-            help="Skip standard fine-tuning baseline (fair comparison on same split).",
         )
 
     def add_run_name_argument(self):
@@ -155,7 +147,7 @@ def prepare_data(args):
     # Log the used script
     mlflow.log_param("data_preparation_script", as_relative_path(script))
 
-    data_dir = get_qsimov_dataset_dir("imagenet_subset")
+    data_dir = get_qsimov_dataset_dir("cifar10")
     mlflow.log_param("generated_data_dir", as_relative_path(data_dir))
 
 
@@ -347,29 +339,6 @@ def create_plots(args):
     )
 
 
-def create_standard_finetune_models(args):
-    """Run standard fine-tuning baseline on the same splits as Qsimov.
-
-    This provides the fair apples-to-apples comparison: Qsimov vs. standard
-    Adam fine-tuning on the same model, same data, same number of epochs.
-    """
-    if args.framework != "keras":
-        return  # standard finetune baseline only implemented for Keras
-
-    script = os.path.join(EXPERIMENT_DIR, "train_keras_standard_finetune.py")
-    mlflow.log_param("standard_finetune_script", as_relative_path(script))
-
-    if not args.skip_standard_finetune:
-        script_args = [
-            "python", script,
-            "--processor", args.processor,
-            "--model-name", args.model_name,
-            "--epochs", str(args.epochs),
-            "--splits", *args.splits,
-        ]
-        exp_mlflow.run_script(script_args, EXPERIMENT_DIR)
-
-
 def run_experiment(args):
     # Prepare the data
     prepare_data(args)
@@ -377,9 +346,6 @@ def run_experiment(args):
     # Run the scripts and retrieve the number of paths
     # that will be used for the qsimov models
     create_models(args)
-
-    # Run standard fine-tuning baseline (fair comparison on same split)
-    create_standard_finetune_models(args)
 
     # Run the qsimov scripts
     create_qsimov_models(args)

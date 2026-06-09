@@ -1,0 +1,36 @@
+{
+    "info": {
+        "artifact_uri": "file:///home/mati/TFG2.0/qsimov/mlruns/765184792623220663/e3388f0142dc4d4b8fb1ecd584d2153c/artifacts",
+        "end_time": null,
+        "experiment_id": "765184792623220663",
+        "lifecycle_stage": "active",
+        "run_id": "e3388f0142dc4d4b8fb1ecd584d2153c",
+        "run_name": "keras_mnist_forgetting_cpu",
+        "run_uuid": "e3388f0142dc4d4b8fb1ecd584d2153c",
+        "start_time": 1780767796883,
+        "status": "RUNNING",
+        "user_id": "Matias",
+        "git_commit": "70086bb97917542e326cd448930b797125d6d2c2"
+    },
+    "data": {
+        "metrics": {},
+        "params": {
+            "base_epochs": "10",
+            "data_preparation_script": "/experiments/mnist_forgetting/preprocess_data.py",
+            "base_model_script": "/experiments/mnist_forgetting/train_base_model.py",
+            "experiment_execution": "/home/mati/TFG2.0/qsimov/experiments/mnist_forgetting/main.py --skip-data-preparation --skip-base-model --skip-forgetting --processor cpu",
+            "processor": "cpu",
+            "forgetting_script": "/experiments/mnist_forgetting/run_forgetting.py",
+            "plots_script": "/experiments/mnist_forgetting/plot_forgetting.py",
+            "phase2_epochs": "5",
+            "plot_file": "20260606_194316_keras_mnist_forgetting_cpu_mnist_forgetting_plot.html"
+        },
+        "tags": {
+            "mlflow.source.name": "/home/mati/TFG2.0/qsimov/experiments/mnist_forgetting/main.py",
+            "mlflow.source.git.commit": "70086bb97917542e326cd448930b797125d6d2c2",
+            "mlflow.source.type": "LOCAL",
+            "mlflow.runName": "keras_mnist_forgetting_cpu",
+            "mlflow.user": "mati"
+        }
+    }
+}
