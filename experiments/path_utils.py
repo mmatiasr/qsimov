@@ -124,12 +124,13 @@ def get_imagenet_subset_by_splits_results_dir(framework, processor):
 ###############################################################################
 
 
-def get_imagenet_continual_learning_results_dir(processor):
+def get_imagenet_continual_learning_results_dir(processor, framework="keras"):
+    fw = "pytorch" if framework == "pytorch" else "tf_keras"
     return join_normalize_paths(
         get_qsimov_results_dir(),
         "imagenet_subset",
         "continual_learning",
-        "tf_keras",
+        fw,
         processor,
     )
 
@@ -139,12 +140,13 @@ def get_imagenet_continual_learning_results_dir(processor):
 ###############################################################################
 
 
-def get_imagenet_streaming_incremental_results_dir(processor):
+def get_imagenet_streaming_incremental_results_dir(processor, framework="keras"):
+    fw = "pytorch" if framework == "pytorch" else "tf_keras"
     return join_normalize_paths(
         get_qsimov_results_dir(),
         "imagenet_subset",
         "streaming_incremental",
-        "tf_keras",
+        fw,
         processor,
     )
 
@@ -154,11 +156,12 @@ def get_imagenet_streaming_incremental_results_dir(processor):
 ###############################################################################
 
 
-def get_initial_layer_sweep_results_dir(processor):
+def get_initial_layer_sweep_results_dir(processor, framework="keras"):
+    fw = "pytorch" if framework == "pytorch" else "tf_keras"
     return join_normalize_paths(
         get_qsimov_results_dir(),
         "imagenet_subset",
         "initial_layer_sweep",
-        "tf_keras",
+        fw,
         processor,
     )

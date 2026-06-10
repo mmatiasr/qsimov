@@ -440,7 +440,8 @@ def make_per_round_time_plot(results, results_dir):
 
 
 def main(args):
-    results_dir = get_imagenet_continual_learning_results_dir(args.processor)
+    framework = getattr(args, "framework", "keras")
+    results_dir = get_imagenet_continual_learning_results_dir(args.processor, framework=framework)
     results = load_results(results_dir)
 
     if not results:
@@ -461,11 +462,8 @@ def main(args):
 class PlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
-        self.add_argument(
-            "--processor",
-            choices=["cpu", "gpu"],
-            default="gpu",
-        )
+        self.add_argument("--processor", choices=["cpu", "gpu"], default="gpu")
+        self.add_argument("--framework", choices=["keras", "pytorch"], default="keras")
 
 
 if __name__ == "__main__":

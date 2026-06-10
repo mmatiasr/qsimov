@@ -21,6 +21,7 @@ Usage example
 
 import sys
 import os
+import subprocess
 import argparse
 import shutil
 import experiments.git as exp_git
@@ -63,7 +64,21 @@ def prepare_data(args):
     mlflow.log_param("data_dir", as_relative_path(data_dir))
 
 
+def _run_pytorch_script(script_name, extra_args):
+    """Run a PyTorch training script directly (no MLflow wrapper)."""
+    script = os.path.join(EXPERIMENT_DIR, script_name)
+    subprocess.run(["python3", script] + extra_args, check=True)
+
+
 def train_initial_models(args):
+    if args.framework == "pytorch":
+        if not args.skip_initial_models:
+            _run_pytorch_script(
+                "train_pytorch.py",
+                ["--processor", args.processor, "--epochs", str(args.epochs)],
+            )
+        return
+
     script = os.path.join(EXPERIMENT_DIR, "train_keras.py")
     mlflow.log_param("initial_models_script", as_relative_path(script))
 
@@ -82,6 +97,14 @@ def train_initial_models(args):
 
 
 def train_qsimov_models(args):
+    if args.framework == "pytorch":
+        if not args.skip_qsimov:
+            _run_pytorch_script(
+                "train_pytorch_qsimov.py",
+                ["--processor", args.processor, "--initial-layer", str(args.initial_layer)],
+            )
+        return
+
     script = os.path.join(EXPERIMENT_DIR, "train_keras_qsimov.py")
     mlflow.log_param("qsimov_script", as_relative_path(script))
 
@@ -107,6 +130,14 @@ def train_qsimov_models(args):
 
 
 def train_standard_models(args):
+    if args.framework == "pytorch":
+        if not args.skip_standard:
+            _run_pytorch_script(
+                "train_pytorch_standard.py",
+                ["--processor", args.processor],
+            )
+        return
+
     script = os.path.join(EXPERIMENT_DIR, "train_keras_standard.py")
     mlflow.log_param("standard_script", as_relative_path(script))
 
@@ -126,14 +157,19 @@ def train_standard_models(args):
 
 def create_plots(args):
     script = os.path.join(EXPERIMENT_DIR, "plot_continual_learning.py")
-    mlflow.log_param("plots_script", as_relative_path(script))
+    if args.framework != "pytorch":
+        mlflow.log_param("plots_script", as_relative_path(script))
 
-    exp_mlflow.run_script(
-        ["python", script, "--processor", args.processor],
-        EXPERIMENT_DIR,
-    )
+    plot_processor_args = ["--processor", args.processor]
+    if args.framework == "pytorch":
+        plot_processor_args += ["--framework", "pytorch"]
+        subprocess.run(["python3", script] + plot_processor_args, check=True)
+    else:
+        exp_mlflow.run_script(["python", script] + plot_processor_args, EXPERIMENT_DIR)
 
-    results_dir = get_results_dir(args.processor)
+    results_dir = get_results_dir(args.processor, framework=args.framework)
+    if args.framework == "pytorch":
+        return
     export_dir = exp_mlflow.get_or_make_export_directory(EXPERIMENT_DIR)
     run_start = exp_mlflow.get_run_start_time()
     run_name = args.run_name
@@ -175,6 +211,10 @@ def main():
     args = parse_arguments()
     exp_git.check_git_clean()
 
+    if args.framework == "pytorch":
+        run_experiment(args)
+        return
+
     mlflow.set_experiment(EXPERIMENT_NAME)
     with mlflow.start_run(run_name=args.run_name):
         mlflow.log_param("experiment_execution", " ".join(sys.argv))
@@ -199,6 +239,7 @@ class ContinualLearningParser(argparse.ArgumentParser):
                           help="Epochs for initial model training (round 1)")
         self.add_argument("--initial-layer", type=int, default=-1,
                           help="Qsimov path selector initial layer (default -1: last Dense)")
+        self.add_argument("--framework", choices=["keras", "pytorch"], default="keras")
         self.add_argument("--run-name", default=None)
         self.add_argument("--skip-data-preparation", action="store_true")
         self.add_argument("--skip-initial-models", action="store_true")
@@ -208,7 +249,9 @@ class ContinualLearningParser(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         parsed = super().parse_args(args, namespace)
         if parsed.run_name is None:
-            parsed.run_name = f"imagenet_cl_{parsed.processor}_layer{parsed.initial_layer}"
+            parsed.run_name = (
+                f"imagenet_cl_{parsed.framework}_{parsed.processor}_layer{parsed.initial_layer}"
+            )
         return parsed
 
 

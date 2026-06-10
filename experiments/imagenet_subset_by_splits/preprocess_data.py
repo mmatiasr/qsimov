@@ -4,14 +4,14 @@ import numpy as np
 import os
 from experiments.path_utils import get_qsimov_dataset_dir
 import tqdm
-import tempfile
 
 
 SEED = 42
 
 # Each directory in the train.X* directories has 25 labels and 1300 images per
 # label. The val.X directory has 50 images per label.
-TRAIN_DIRS = ["train.X1", "train.X2"]  # , "train.X3", "train.X4"]
+# All 4 dirs are needed so that NUM_LABELS=100 divides by N_ROUNDS=4 and N_BATCHES=20.
+TRAIN_DIRS = ["train.X1", "train.X2", "train.X3", "train.X4"]
 NUM_LABELS = 25 * len(TRAIN_DIRS)
 
 TRAIN_IMAGES_PER_LABEL = 1300
@@ -33,72 +33,65 @@ def sizeof_numpy_array(arr):
     return sizeof_fmt(arr.size * arr.itemsize)
 
 
-# slow imports
-def make_imports():
-    global kr, tf
-    from tensorflow import keras as kr
-    import tensorflow as tf
+def get_train_test_data(imagenet_dir):
+    """Load and resize imagenet images from raw directory to numpy arrays.
 
+    Parameters
+    ----------
+    imagenet_dir : str
+        Directory containing train.X1, train.X2, ..., val.X subdirectories.
+    """
+    from PIL import Image
 
-def get_train_test_data(data_dir):
-    # make a temporary directory with soft links to training images that
-    # belong to the labels in the train_dirs
-    tmp_dir = tempfile.mkdtemp()
-    os.makedirs(tmp_dir, exist_ok=True)
-    used_labels = set()  # set of labels in the training set
-
-    # create soft links
+    # Collect sorted label names from all train dirs
+    used_labels = set()
     for train_dir in TRAIN_DIRS:
-        for label in os.listdir(os.path.join(data_dir, train_dir)):
-            used_labels.add(label)
-            os.symlink(
-                os.path.join(data_dir, train_dir, label),
-                os.path.join(tmp_dir, label),
-            )
+        d = os.path.join(imagenet_dir, train_dir)
+        if os.path.isdir(d):
+            used_labels.update(os.listdir(d))
+    sorted_labels = sorted(used_labels)
+    label_to_idx = {lbl: i for i, lbl in enumerate(sorted_labels)}
 
-    # Create the train dataset using the temporary directory with soft links
-    dataset_train = kr.utils.image_dataset_from_directory(
-        tmp_dir, image_size=IMAGE_SIZE, batch_size=32
-    ).as_numpy_iterator()
+    # Load train images
+    x_list, y_list = [], []
+    print("Loading train data...")
+    for train_dir in TRAIN_DIRS:
+        for label in tqdm.tqdm(sorted_labels, desc=train_dir):
+            cls_dir = os.path.join(imagenet_dir, train_dir, label)
+            if not os.path.isdir(cls_dir):
+                continue
+            for img_name in sorted(os.listdir(cls_dir)):
+                try:
+                    img = Image.open(os.path.join(cls_dir, img_name)).convert("RGB")
+                    img = img.resize(IMAGE_SIZE)
+                    x_list.append(np.array(img, dtype=np.uint8))
+                    y_list.append(label_to_idx[label])
+                except Exception:
+                    pass
 
-    # Create the train arrays
-    x_train = np.empty((NUM_TRAIN_SAMPLES, *IMAGE_SIZE, 3), dtype=np.uint8)
-    y_train = np.zeros((NUM_TRAIN_SAMPLES,), dtype=np.int16)
+    x_train = np.array(x_list, dtype=np.uint8)
+    y_train = np.array(y_list, dtype=np.int16)
 
-    print("Loading the data...")
-    # Fill the arrays
-    idx = 0
-    for images, labels in tqdm.tqdm(dataset_train):
-        batch_size = images.shape[0]
-        x_train[idx : idx + batch_size] = images
-        y_train[idx : idx + batch_size] = labels
-        idx += batch_size
+    # Load validation images
+    xv_list, yv_list = [], []
+    print("Loading val data...")
+    val_dir = os.path.join(imagenet_dir, "val.X")
+    for label in tqdm.tqdm(sorted_labels, desc="val"):
+        cls_dir = os.path.join(val_dir, label)
+        if not os.path.isdir(cls_dir):
+            continue
+        for img_name in sorted(os.listdir(cls_dir)):
+            try:
+                img = Image.open(os.path.join(cls_dir, img_name)).convert("RGB")
+                img = img.resize(IMAGE_SIZE)
+                xv_list.append(np.array(img, dtype=np.uint8))
+                yv_list.append(label_to_idx[label])
+            except Exception:
+                pass
 
-    # Create the test arrays
-    y_test = np.zeros((NUM_VAL_SAMPLES,), dtype=np.int16)
-    x_test = np.empty((NUM_VAL_SAMPLES, *IMAGE_SIZE, 3), dtype=np.uint8)
+    x_test = np.array(xv_list, dtype=np.uint8)
+    y_test = np.array(yv_list, dtype=np.int16)
 
-    # make a temporary directory with soft links to validation images that
-    # belong to the labels in the training set
-    tmp_dir = tempfile.mkdtemp()
-    test_dir = os.path.join(data_dir, "val.X")
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    # create soft links
-    for label in used_labels:
-        os.symlink(os.path.join(test_dir, label), os.path.join(tmp_dir, label))
-
-    dataset_test = kr.utils.image_dataset_from_directory(
-        tmp_dir, image_size=(224, 224), batch_size=None
-    ).as_numpy_iterator()
-
-    idx = 0
-    for image, label in tqdm.tqdm(dataset_test):
-        x_test[idx] = image
-        y_test[idx] = label
-        idx += 1
-
-    # Print the shape of the data
     print("x_train shape:", x_train.shape, sizeof_numpy_array(x_train))
     print("y_train shape:", y_train.shape, sizeof_numpy_array(y_train))
     print("x_test shape:", x_test.shape, sizeof_numpy_array(x_test))
@@ -147,24 +140,28 @@ def load_dataset():
 
 
 def main():
-    # Import libraries
-    make_imports()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--imagenet-dir",
+        default=get_qsimov_dataset_dir("imagenet_subset"),
+        help=(
+            "Path to the raw ImageNet directory containing train.X1, "
+            "train.X2, train.X3, train.X4, and val.X subdirectories. "
+            "Defaults to data/imagenet_subset/ inside QSIMOV_HOME."
+        ),
+    )
+    args = parser.parse_args()
 
-    # Set seed
-    kr.utils.set_random_seed(SEED)
+    np.random.seed(SEED)
 
-    # Define the directory of the files
     data_dir = get_qsimov_dataset_dir("imagenet_subset")
     os.makedirs(data_dir, exist_ok=True)
 
-    # Load the data
-    x_train, y_train, x_test, y_test = get_train_test_data(data_dir)
+    x_train, y_train, x_test, y_test = get_train_test_data(args.imagenet_dir)
 
-    # Save the train data
     np.save(os.path.join(data_dir, "x_train.npy"), x_train)
     np.save(os.path.join(data_dir, "y_train.npy"), y_train)
-
-    # Save the test data
     np.save(os.path.join(data_dir, "x_test.npy"), x_test)
     np.save(os.path.join(data_dir, "y_test.npy"), y_test)
 

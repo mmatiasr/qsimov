@@ -155,7 +155,8 @@ def plot_accuracy_vs_cumulative_time(data, results_dir):
 
 
 def main(args):
-    results_dir = get_imagenet_streaming_incremental_results_dir(args.processor)
+    framework = getattr(args, "framework", "keras")
+    results_dir = get_imagenet_streaming_incremental_results_dir(args.processor, framework=framework)
     data = load_results(results_dir)
 
     if not data:
@@ -176,6 +177,7 @@ class PlotParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
         self.add_argument("--processor", choices=["cpu", "gpu"], default="gpu")
+        self.add_argument("--framework", choices=["keras", "pytorch"], default="keras")
 
 
 if __name__ == "__main__":
