@@ -45,17 +45,19 @@ def load_data(data_dir=None):
 
 
 if __name__ == "__main__":
-    import tensorflow as tf
-
-    tf.keras.utils.set_random_seed(SEED)
+    import torchvision
 
     data_dir = get_data_dir()
     os.makedirs(data_dir, exist_ok=True)
 
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    _cache = os.path.join(data_dir, "_torchvision_cache")
+    _train = torchvision.datasets.MNIST(root=_cache, train=True, download=True)
+    _test  = torchvision.datasets.MNIST(root=_cache, train=False, download=True)
 
-    x_train = x_train.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
-    x_test = x_test.reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
+    x_train = _train.data.numpy().reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
+    y_train = _train.targets.numpy()
+    x_test  = _test.data.numpy().reshape(-1, 28, 28, 1).astype(np.float32) / 255.0
+    y_test  = _test.targets.numpy()
 
     rng = np.random.default_rng(SEED)
     idx = rng.permutation(len(x_train))

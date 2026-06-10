@@ -38,18 +38,19 @@ def load_data(data_dir=None):
 
 
 if __name__ == "__main__":
-    import tensorflow as tf
+    import torchvision
 
-    tf.keras.utils.set_random_seed(SEED)
     data_dir = get_data_dir()
     os.makedirs(data_dir, exist_ok=True)
 
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    y_train = y_train.ravel()
-    y_test  = y_test.ravel()
+    _cache = os.path.join(data_dir, "_torchvision_cache")
+    _train = torchvision.datasets.CIFAR10(root=_cache, train=True,  download=True)
+    _test  = torchvision.datasets.CIFAR10(root=_cache, train=False, download=True)
 
-    x_train = x_train.astype(np.float32) / 255.0
-    x_test  = x_test.astype(np.float32) / 255.0
+    x_train = np.array(_train.data, dtype=np.float32) / 255.0
+    y_train = np.array(_train.targets)
+    x_test  = np.array(_test.data,  dtype=np.float32) / 255.0
+    y_test  = np.array(_test.targets)
 
     rng = np.random.default_rng(SEED)
     idx = rng.permutation(len(x_train))

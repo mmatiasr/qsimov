@@ -98,7 +98,7 @@ def create_accuracy_plot(results, output_path):
 
 
 def main(args):
-    results_dir = get_mnist_forgetting_results_dir("keras", args.processor)
+    results_dir = get_mnist_forgetting_results_dir(args.framework, args.processor)
     results = load_results(results_dir)
 
     if not results:
@@ -120,6 +120,7 @@ class PlotForgettingParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
         self.add_argument("--processor", choices=["cpu", "gpu"], default="cpu")
+        self.add_argument("--framework", choices=["keras", "pytorch"], default="keras")
 
 
 if __name__ == "__main__":

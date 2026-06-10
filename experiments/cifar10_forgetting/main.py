@@ -36,6 +36,7 @@ class Cifar10ForgettingParser(argparse.ArgumentParser):
 
     def add_arguments(self):
         self.add_argument("--processor", choices=["cpu", "gpu"], default="cpu")
+        self.add_argument("--framework", choices=["keras", "pytorch"], default="keras")
         self.add_argument("--base-epochs", type=int, default=20)
         self.add_argument("--epochs", type=int, default=5)
         self.add_argument("--skip-data-preparation", action="store_true")
@@ -52,7 +53,10 @@ def prepare_data(args):
 
 
 def train_base_model(args):
-    script = os.path.join(EXPERIMENT_DIR, "train_base_model.py")
+    if args.framework == "pytorch":
+        script = os.path.join(EXPERIMENT_DIR, "pytorch_train_base_model.py")
+    else:
+        script = os.path.join(EXPERIMENT_DIR, "train_base_model.py")
     mlflow.log_param("base_model_script", as_relative_path(script))
     if not args.skip_base_model:
         exp_mlflow.run_script(
@@ -64,7 +68,10 @@ def train_base_model(args):
 
 
 def run_forgetting(args):
-    script = os.path.join(EXPERIMENT_DIR, "run_forgetting.py")
+    if args.framework == "pytorch":
+        script = os.path.join(EXPERIMENT_DIR, "pytorch_run_forgetting.py")
+    else:
+        script = os.path.join(EXPERIMENT_DIR, "run_forgetting.py")
     mlflow.log_param("forgetting_script", as_relative_path(script))
     if not args.skip_forgetting:
         exp_mlflow.run_script(
@@ -78,12 +85,14 @@ def run_forgetting(args):
 def generate_plots(args, run_name):
     script = os.path.join(EXPERIMENT_DIR, "plot_forgetting.py")
     exp_mlflow.run_script(
-        ["python", script, "--processor", args.processor],
+        ["python", script,
+         "--processor", args.processor,
+         "--framework", args.framework],
         EXPERIMENT_DIR,
     )
     mlflow.log_param("plots_script", as_relative_path(script))
 
-    results_dir = get_results_dir("keras", args.processor)
+    results_dir = get_results_dir(args.framework, args.processor)
     export_dir  = exp_mlflow.get_or_make_export_directory(EXPERIMENT_DIR)
     run_start   = exp_mlflow.get_run_start_time()
 
@@ -97,13 +106,14 @@ def generate_plots(args, run_name):
 def main():
     parser = Cifar10ForgettingParser(description=EXPERIMENT_DESCRIPTION)
     args = parser.parse_args()
-    run_name = args.run_name or f"keras_{EXPERIMENT_NAME}_{args.processor}"
+    run_name = args.run_name or f"{args.framework}_{EXPERIMENT_NAME}_{args.processor}"
 
     exp_git.check_git_clean()
 
     mlflow.set_experiment(EXPERIMENT_NAME)
     with mlflow.start_run(run_name=run_name):
         mlflow.log_param("experiment_execution", " ".join(sys.argv))
+        mlflow.log_param("framework", args.framework)
         mlflow.log_param("processor", args.processor)
         mlflow.log_param("base_epochs", args.base_epochs)
         mlflow.log_param("phase2_epochs", args.epochs)
