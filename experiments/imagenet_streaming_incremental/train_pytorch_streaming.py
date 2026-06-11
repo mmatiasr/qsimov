@@ -26,7 +26,10 @@ from experiments.imagenet_streaming_incremental.preprocess_data import (
     load_dataset,
     make_streaming_batches,
 )
-from experiments.imagenet_subset_by_splits.preprocess_data import NUM_LABELS
+from experiments.imagenet_subset_by_splits.preprocess_data import (
+    NUM_LABELS,
+    INPUT_SHAPE_NCHW,
+)
 from qsimov.pytorch_path_selector import PytorchPathSelector
 from qsimov.pytorch_qsimov_linear_system import PytorchQsimovLinearSystem
 from qsimov.pytorch_qsimov_gradient import PytorchQsimovGradient
@@ -84,7 +87,7 @@ def run_qsimov_linear_accum(batches, cl_results_dir, results_dir, device):
     )
     path_selector = PytorchPathSelector(
         neural_network=base_model,
-        input_shape=(3, 224, 224),
+        input_shape=INPUT_SHAPE_NCHW,
         initial_layer=INITIAL_LAYER,
         verbose=1,
         device=device,
@@ -139,7 +142,7 @@ def run_qsimov_gradient(batches, cl_results_dir, results_dir, device):
     )
     path_selector = PytorchPathSelector(
         neural_network=base_model,
-        input_shape=(3, 224, 224),
+        input_shape=INPUT_SHAPE_NCHW,
         initial_layer=INITIAL_LAYER,
         verbose=1,
         device=device,

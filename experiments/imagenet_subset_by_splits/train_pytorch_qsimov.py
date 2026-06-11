@@ -15,7 +15,10 @@ import torch.nn as nn
 from experiments.path_utils import (
     get_imagenet_subset_by_splits_results_dir as get_results_dir,
 )
-from experiments.imagenet_subset_by_splits.preprocess_data import load_dataset
+from experiments.imagenet_subset_by_splits.preprocess_data import (
+    load_dataset,
+    INPUT_SHAPE_NCHW,
+)
 from experiments.imagenet_subset_by_splits.train_pytorch import (
     TrainModelsParser,
     split_to_name,
@@ -47,10 +50,9 @@ def make_qsimov_model(results_dir, split, args, device):
     model_file = f"{split_to_name(split)}_path_selector_{args.model_name}_model.pt"
     base_model = torch.load(os.path.join(results_dir, model_file), map_location=device)
 
-    input_shape = (3, 224, 224)
     path_selector = PytorchPathSelector(
         neural_network=base_model,
-        input_shape=input_shape,
+        input_shape=INPUT_SHAPE_NCHW,
         initial_layer=args.initial_layer,
         verbose=1,
         device=device,

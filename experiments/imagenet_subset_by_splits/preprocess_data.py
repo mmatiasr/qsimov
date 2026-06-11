@@ -18,7 +18,13 @@ TRAIN_IMAGES_PER_LABEL = 1300
 VAL_IMAGES_PER_LABEL = 50
 NUM_TRAIN_SAMPLES = TRAIN_IMAGES_PER_LABEL * NUM_LABELS
 NUM_VAL_SAMPLES = VAL_IMAGES_PER_LABEL * NUM_LABELS
-IMAGE_SIZE = (224, 224)
+
+# 64×64: used for both npz loading AND PIL resizing so the stored arrays
+# always have the same spatial size regardless of loading mode.
+IMAGE_SIZE = (64, 64)
+
+# Convenience constant imported by PyTorch training scripts (NCHW).
+INPUT_SHAPE_NCHW = (3, IMAGE_SIZE[0], IMAGE_SIZE[1])
 
 
 def sizeof_fmt(num, suffix="B"):
@@ -31,6 +37,102 @@ def sizeof_fmt(num, suffix="B"):
 
 def sizeof_numpy_array(arr):
     return sizeof_fmt(arr.size * arr.itemsize)
+
+
+# ---------------------------------------------------------------------------
+# NPZ format (downsampled 64×64 ImageNet from image-net.org)
+# ---------------------------------------------------------------------------
+
+def _load_npz_array(path):
+    """Load one npz file, returning (x_nhwc_uint8, y_int0indexed)."""
+    d = np.load(path, allow_pickle=False)
+
+    # --- locate image array (try common key names) ---
+    for key in ("data", "x", "images"):
+        if key in d:
+            x_raw = d[key]
+            break
+    else:
+        raise KeyError(f"Cannot find image array in {path}. Keys: {list(d.keys())}")
+
+    # --- locate label array ---
+    for key in ("labels", "y", "fine_labels"):
+        if key in d:
+            y_raw = d[key].astype(np.int32).ravel()
+            break
+    else:
+        raise KeyError(f"Cannot find label array in {path}. Keys: {list(d.keys())}")
+
+    # --- reshape image array to NHWC uint8 ---
+    n = len(y_raw)
+    if x_raw.ndim == 2:
+        # Flat (N, C*H*W) — most common for downsampled ImageNet
+        chw = x_raw.shape[1]
+        h = w = int(round((chw / 3) ** 0.5))
+        x_raw = x_raw.reshape(n, 3, h, w)          # → NCHW
+    if x_raw.ndim == 4 and x_raw.shape[1] == 3:
+        x_raw = x_raw.transpose(0, 2, 3, 1)        # NCHW → NHWC
+
+    x_uint8 = x_raw.astype(np.uint8)
+
+    # Labels may be 1-indexed (ILSVRC convention) or 0-indexed
+    if y_raw.min() >= 1:
+        y_raw = y_raw - 1  # → 0-indexed
+
+    return x_uint8, y_raw
+
+
+def get_train_test_data_npz(npz_dir):
+    """Load 64×64 downsampled ImageNet from npz files.
+
+    Expected files in npz_dir (any naming containing 'train'/'val'):
+        Imagenet64_train_part1.npz  (~6 GB)
+        Imagenet64_train_part2.npz  (~6 GB)
+        Imagenet64_val.npz          (~500 MB)
+
+    Selects the first NUM_LABELS=100 classes (indices 0-99).
+    """
+    files = sorted(os.listdir(npz_dir))
+    train_files = [f for f in files if f.endswith(".npz") and "train" in f.lower()]
+    val_files   = [f for f in files if f.endswith(".npz") and "val"   in f.lower()]
+
+    if not train_files:
+        raise FileNotFoundError(
+            f"No npz train files found in '{npz_dir}'. "
+            "Expected files containing 'train' in the name."
+        )
+    if not val_files:
+        raise FileNotFoundError(
+            f"No npz val files found in '{npz_dir}'. "
+            "Expected a file containing 'val' in the name."
+        )
+
+    print(f"Train npz files: {train_files}")
+    print(f"Val   npz files: {val_files}")
+
+    # Load and concatenate training data
+    train_x_parts, train_y_parts = [], []
+    for fname in train_files:
+        print(f"Loading {fname}…")
+        x, y = _load_npz_array(os.path.join(npz_dir, fname))
+        train_x_parts.append(x)
+        train_y_parts.append(y)
+    x_all = np.concatenate(train_x_parts)
+    y_all = np.concatenate(train_y_parts)
+
+    # Load validation
+    print(f"Loading {val_files[0]}…")
+    x_val_all, y_val_all = _load_npz_array(os.path.join(npz_dir, val_files[0]))
+
+    # Subset to first NUM_LABELS classes
+    train_mask = y_all     < NUM_LABELS
+    val_mask   = y_val_all < NUM_LABELS
+    x_train = x_all[train_mask]
+    y_train = y_all[train_mask].astype(np.int16)
+    x_test  = x_val_all[val_mask]
+    y_test  = y_val_all[val_mask].astype(np.int16)
+
+    return x_train, y_train, x_test, y_test
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +434,15 @@ def main():
         ),
     )
     parser.add_argument(
+        "--npz-dir",
+        default=None,
+        help=(
+            "Path to directory containing the 64×64 downsampled ImageNet npz files "
+            "(Imagenet64_train_part1.npz, Imagenet64_train_part2.npz, Imagenet64_val.npz). "
+            "When provided, --imagenet-dir and --reorganize-val are ignored."
+        ),
+    )
+    parser.add_argument(
         "--reorganize-val",
         action="store_true",
         help=(
@@ -341,6 +452,22 @@ def main():
         ),
     )
     args = parser.parse_args()
+
+    if args.npz_dir:
+        np.random.seed(SEED)
+        data_dir = get_qsimov_dataset_dir("imagenet_subset")
+        os.makedirs(data_dir, exist_ok=True)
+        x_train, y_train, x_test, y_test = get_train_test_data_npz(args.npz_dir)
+        print("x_train shape:", x_train.shape, sizeof_numpy_array(x_train))
+        print("y_train shape:", y_train.shape, sizeof_numpy_array(y_train))
+        print("x_test  shape:", x_test.shape,  sizeof_numpy_array(x_test))
+        print("y_test  shape:", y_test.shape,  sizeof_numpy_array(y_test))
+        np.save(os.path.join(data_dir, "x_train.npy"), x_train)
+        np.save(os.path.join(data_dir, "y_train.npy"), y_train)
+        np.save(os.path.join(data_dir, "x_test.npy"),  x_test)
+        np.save(os.path.join(data_dir, "y_test.npy"),  y_test)
+        print(f"\nSaved numpy arrays to {data_dir}")
+        return
 
     if args.reorganize_val:
         _reorganize_val(args.imagenet_dir)

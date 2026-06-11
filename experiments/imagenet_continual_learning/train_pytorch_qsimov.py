@@ -21,6 +21,7 @@ from experiments.imagenet_continual_learning.preprocess_data import (
     NUM_LABELS,
     N_ROUNDS,
 )
+from experiments.imagenet_subset_by_splits.preprocess_data import INPUT_SHAPE_NCHW
 from qsimov.pytorch_path_selector import PytorchPathSelector
 from qsimov.pytorch_qsimov_linear_system import PytorchQsimovLinearSystem
 from qsimov.pytorch_qsimov_gradient import PytorchQsimovGradient
@@ -178,7 +179,7 @@ def execute_logic(method, results_dir, args, device):
         )
         path_selector = PytorchPathSelector(
             neural_network=base_model,
-            input_shape=(3, 224, 224),
+            input_shape=INPUT_SHAPE_NCHW,
             initial_layer=args.initial_layer,
             verbose=1,
             device=device,
@@ -194,7 +195,7 @@ def execute_logic(method, results_dir, args, device):
         )
         path_selector = PytorchPathSelector(
             neural_network=base_model,
-            input_shape=(3, 224, 224),
+            input_shape=INPUT_SHAPE_NCHW,
             initial_layer=args.initial_layer,
             verbose=1,
             device=device,

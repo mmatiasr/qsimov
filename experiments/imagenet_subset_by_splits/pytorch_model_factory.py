@@ -18,7 +18,7 @@ import torchvision.models as tv_models
 
 from experiments.imagenet_subset_by_splits.preprocess_data import NUM_LABELS
 
-ORIGINAL_SHAPE = (224, 224, 3)
+ORIGINAL_SHAPE = (64, 64, 3)
 
 
 class _Preprocess(nn.Module):

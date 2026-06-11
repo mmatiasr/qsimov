@@ -22,7 +22,10 @@ from experiments.path_utils import (
     get_initial_layer_sweep_results_dir,
     get_imagenet_continual_learning_results_dir,
 )
-from experiments.imagenet_subset_by_splits.preprocess_data import NUM_LABELS
+from experiments.imagenet_subset_by_splits.preprocess_data import (
+    NUM_LABELS,
+    INPUT_SHAPE_NCHW,
+)
 from experiments.imagenet_continual_learning.preprocess_data import load_dataset
 from qsimov.pytorch_path_selector import PytorchPathSelector
 from qsimov.pytorch_qsimov_linear_system import PytorchQsimovLinearSystem
@@ -72,7 +75,7 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
     t0 = time.time()
     ps_linear = PytorchPathSelector(
         neural_network=base_linear,
-        input_shape=(3, 224, 224),
+        input_shape=INPUT_SHAPE_NCHW,
         initial_layer=initial_layer,
         verbose=1,
         device=device,
@@ -118,7 +121,7 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
     t0 = time.time()
     ps_softmax = PytorchPathSelector(
         neural_network=base_softmax,
-        input_shape=(3, 224, 224),
+        input_shape=INPUT_SHAPE_NCHW,
         initial_layer=initial_layer,
         verbose=1,
         device=device,
