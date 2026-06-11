@@ -40,81 +40,93 @@ def sizeof_numpy_array(arr):
 
 
 # ---------------------------------------------------------------------------
-# NPZ format (downsampled 64×64 ImageNet from image-net.org)
+# Downsampled 64×64 ImageNet — zip+pickle format (image-net.org)
+#
+# Each zip contains pickle batch files (no extension):
+#   Imagenet64_train_part1.zip → train_data_batch_1 … train_data_batch_5
+#   Imagenet64_train_part2.zip → train_data_batch_6 … train_data_batch_10
+#   Imagenet64_val.zip         → val_data
+#
+# Each batch file is a pickle dict with:
+#   'data'  : uint8 ndarray (N, 12288) = (N, 3×64×64), channels-first flattened
+#   'labels': list of ints 1-1000 (1-indexed)
+#   'mean'  : (12288,) mean image (ignored)
 # ---------------------------------------------------------------------------
 
-def _load_npz_array(path):
-    """Load one npz file, returning (x_nhwc_uint8, y_int0indexed)."""
-    d = np.load(path, allow_pickle=False)
+def _load_pickle_batch(file_obj):
+    """Load one pickle batch, return (x_nhwc_uint8, y_0indexed)."""
+    import pickle
+    d = pickle.load(file_obj, encoding='bytes')
+    # Keys may be bytes or str depending on how the file was created
+    def _get(d, *keys):
+        for k in keys:
+            if k in d: return d[k]
+            if k.encode() in d: return d[k.encode()]
+        raise KeyError(f"None of {keys} found in batch. Keys: {list(d.keys())}")
 
-    # --- locate image array (try common key names) ---
-    for key in ("data", "x", "images"):
-        if key in d:
-            x_raw = d[key]
-            break
-    else:
-        raise KeyError(f"Cannot find image array in {path}. Keys: {list(d.keys())}")
+    x_raw = _get(d, 'data')           # (N, 12288)
+    y_raw = np.array(_get(d, 'labels')).ravel().astype(np.int32)
 
-    # --- locate label array ---
-    for key in ("labels", "y", "fine_labels"):
-        if key in d:
-            y_raw = d[key].astype(np.int32).ravel()
-            break
-    else:
-        raise KeyError(f"Cannot find label array in {path}. Keys: {list(d.keys())}")
-
-    # --- reshape image array to NHWC uint8 ---
+    # Reshape (N, 3*H*W) → NHWC
     n = len(y_raw)
-    if x_raw.ndim == 2:
-        # Flat (N, C*H*W) — most common for downsampled ImageNet
-        chw = x_raw.shape[1]
-        h = w = int(round((chw / 3) ** 0.5))
-        x_raw = x_raw.reshape(n, 3, h, w)          # → NCHW
-    if x_raw.ndim == 4 and x_raw.shape[1] == 3:
-        x_raw = x_raw.transpose(0, 2, 3, 1)        # NCHW → NHWC
+    h = w = int(round((x_raw.shape[1] / 3) ** 0.5))   # 64
+    x_nhwc = x_raw.reshape(n, 3, h, w).transpose(0, 2, 3, 1).astype(np.uint8)
 
-    x_uint8 = x_raw.astype(np.uint8)
-
-    # Labels may be 1-indexed (ILSVRC convention) or 0-indexed
+    # Convert 1-indexed → 0-indexed
     if y_raw.min() >= 1:
-        y_raw = y_raw - 1  # → 0-indexed
+        y_raw -= 1
 
-    return x_uint8, y_raw
+    return x_nhwc, y_raw
+
+
+def _load_all_batches_from_zip(zip_path):
+    """Read every pickle batch inside a zip, return concatenated arrays."""
+    import zipfile
+    xs, ys = [], []
+    with zipfile.ZipFile(zip_path) as z:
+        names = sorted(z.namelist())
+        for name in names:
+            print(f"  loading {name}…")
+            with z.open(name) as f:
+                x, y = _load_pickle_batch(f)
+            xs.append(x)
+            ys.append(y)
+    return np.concatenate(xs), np.concatenate(ys)
 
 
 def get_train_test_data_npz(npz_dir):
-    """Load 64×64 downsampled ImageNet from npz files.
+    """Load 64×64 downsampled ImageNet from zip files (image-net.org format).
 
-    Expected files in npz_dir (any naming containing 'train'/'val'):
-        Imagenet64_train_part1.npz  (~6 GB)
-        Imagenet64_train_part2.npz  (~6 GB)
-        Imagenet64_val.npz          (~500 MB)
+    Expected files in npz_dir:
+        Imagenet64_train_part1.zip  (~6 GB)
+        Imagenet64_train_part2.zip  (~6 GB)
+        Imagenet64_val.zip          (~500 MB)
 
     Selects the first NUM_LABELS=100 classes (indices 0-99).
     """
     files = sorted(os.listdir(npz_dir))
-    train_files = [f for f in files if f.endswith(".npz") and "train" in f.lower()]
-    val_files   = [f for f in files if f.endswith(".npz") and "val"   in f.lower()]
+    train_files = [f for f in files if f.endswith(".zip") and "train" in f.lower()]
+    val_files   = [f for f in files if f.endswith(".zip") and "val"   in f.lower()]
 
     if not train_files:
         raise FileNotFoundError(
-            f"No npz train files found in '{npz_dir}'. "
-            "Expected files containing 'train' in the name."
+            f"No zip train files found in '{npz_dir}'. "
+            "Expected files like Imagenet64_train_part1.zip"
         )
     if not val_files:
         raise FileNotFoundError(
-            f"No npz val files found in '{npz_dir}'. "
-            "Expected a file containing 'val' in the name."
+            f"No zip val file found in '{npz_dir}'. "
+            "Expected a file like Imagenet64_val.zip"
         )
 
-    print(f"Train npz files: {train_files}")
-    print(f"Val   npz files: {val_files}")
+    print(f"Train zip files: {train_files}")
+    print(f"Val   zip files: {val_files}")
 
     # Load and concatenate training data
     train_x_parts, train_y_parts = [], []
     for fname in train_files:
         print(f"Loading {fname}…")
-        x, y = _load_npz_array(os.path.join(npz_dir, fname))
+        x, y = _load_all_batches_from_zip(os.path.join(npz_dir, fname))
         train_x_parts.append(x)
         train_y_parts.append(y)
     x_all = np.concatenate(train_x_parts)
@@ -122,7 +134,7 @@ def get_train_test_data_npz(npz_dir):
 
     # Load validation
     print(f"Loading {val_files[0]}…")
-    x_val_all, y_val_all = _load_npz_array(os.path.join(npz_dir, val_files[0]))
+    x_val_all, y_val_all = _load_all_batches_from_zip(os.path.join(npz_dir, val_files[0]))
 
     # Subset to first NUM_LABELS classes
     train_mask = y_all     < NUM_LABELS
