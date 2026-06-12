@@ -142,9 +142,10 @@ def run_qsimov_gradient(path_selector, rounds_nchw, test_x, test_y, device):
 
     for k, (train_x, train_y, _, _) in enumerate(rounds_nchw, 1):
         t0 = time.time()
+        y_onehot = np.eye(NUM_LABELS, dtype=np.float32)[train_y.astype(int)]
         qg.fit(
             train_x,
-            train_y.astype(np.int64),
+            y_onehot,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS_PER_ROUND,
             loss_function=nn.CrossEntropyLoss(),

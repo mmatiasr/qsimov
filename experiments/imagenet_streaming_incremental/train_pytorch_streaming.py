@@ -156,9 +156,10 @@ def run_qsimov_gradient(batches, cl_results_dir, results_dir, device):
         bc = _convert_batch(batch)
 
         t0 = time.time()
+        y_onehot = np.eye(NUM_LABELS, dtype=np.float32)[bc["train_y"].astype(int)]
         qg.fit(
             bc["train_x"],
-            bc["train_y"].astype(np.int64),
+            y_onehot,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS_PER_BATCH,
             loss_function=nn.CrossEntropyLoss(),
