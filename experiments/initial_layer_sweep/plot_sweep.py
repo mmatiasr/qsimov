@@ -44,19 +44,45 @@ def _x_labels(results):
     return [str(r["initial_layer"]) for r in results]
 
 
-def plot_n_paths(results, results_dir):
-    x = _x_labels(results)
-    y = [r["n_paths"] for r in results]
+def _entry_status(r):
+    return r.get("linear", {}).get("status", "ok")
 
-    colors = [
-        "#d62728" if (r.get("linear", {}).get("status") == "infeasible") else "#1f77b4"
-        for r in results
-    ]
+
+def plot_n_paths(results, results_dir):
+    x, y, colors, annotations = [], [], [], []
+
+    for r in results:
+        label = str(r["initial_layer"])
+        status = _entry_status(r)
+        x.append(label)
+
+        if status == "invalid_layer":
+            # No n_paths available — use 0 as placeholder, annotate instead
+            y.append(0)
+            colors.append("#d62728")
+            annotations.append(dict(
+                x=label, y=0,
+                text="invalid layer",
+                showarrow=False, yshift=20, font=dict(color="#d62728"),
+            ))
+        else:
+            n = r.get("n_paths", 0)
+            y.append(n)
+            if status == "infeasible":
+                colors.append("#d62728")
+                annotations.append(dict(
+                    x=label, y=n,
+                    text="infeasible",
+                    showarrow=False, yshift=20, font=dict(color="#d62728"),
+                ))
+            else:
+                colors.append("#1f77b4")
+                annotations.append(dict(x=label, y=n, text="", showarrow=False))
 
     fig = go.Figure(go.Bar(
         x=x, y=y,
         marker_color=colors,
-        text=[f"{v:,}" for v in y],
+        text=[f"{v:,}" if v > 0 else "" for v in y],
         textposition="outside",
     ))
     fig.update_layout(
@@ -64,14 +90,7 @@ def plot_n_paths(results, results_dir):
         xaxis_title="initial_layer",
         yaxis_title="Number of Paths",
         yaxis_type="log",
-        annotations=[
-            dict(
-                x=xi, y=yi,
-                text="infeasible" if r.get("linear", {}).get("status") == "infeasible" else "",
-                showarrow=False, yshift=20, font=dict(color="#d62728"),
-            )
-            for xi, yi, r in zip(x, y, results)
-        ],
+        annotations=annotations,
     )
     out = os.path.join(results_dir, "n_paths_vs_initial_layer.html")
     fig.write_html(out, config=PLOTLY_CONFIG)
