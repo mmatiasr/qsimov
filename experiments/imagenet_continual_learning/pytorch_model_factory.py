@@ -36,6 +36,10 @@ def _build_vgg16_top(last_activation):
     ]
     if last_activation == "softmax":
         layers.append(nn.Softmax(dim=1))
+    else:
+        # Identity keeps the layer count equal to the softmax model so that
+        # initial_layer=-2 lands on Linear(128→NUM_LABELS) in both variants.
+        layers.append(nn.Identity())
     return nn.Sequential(*layers)
 
 
