@@ -76,7 +76,7 @@ class PlotGradientBySplitsParser(TrainModelsParser):
             "--framework",
             type=str,
             default="keras",
-            choices=["keras"],
+            choices=["keras", "pytorch"],
         )
 
 
