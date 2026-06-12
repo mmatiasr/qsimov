@@ -43,7 +43,7 @@ def save_results(name, model_name, model, history, results_dir):
         f.write(str(n_paths))
 
 
-def _accuracy(y_true, y_pred):
+def accuracy(y_true, y_pred):
     return float((y_true.argmax(1) == y_pred.argmax(1)).mean())
 
 
@@ -80,6 +80,7 @@ def execute_logic(results_dir, split, args, device):
         batch_size=BATCH_SIZE,
         epochs=args.epochs,
         loss_function=nn.CrossEntropyLoss(),
+        metrics=[accuracy],
         optimizer=lambda params: torch.optim.Adam(params, lr=1e-5),
         device=device,
     )
