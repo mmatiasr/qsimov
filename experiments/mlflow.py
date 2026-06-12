@@ -80,7 +80,10 @@ def run_script(command_as_list, experiment_dir):
     if command_as_list[0] == "python":
         command_as_list = [sys.executable] + command_as_list[1:]
     print("\n\nRunning {}\n\n".format(" ".join(command_as_list)), flush=True)
-    result = subprocess.run(command_as_list, env=os.environ.copy())
+    env = os.environ.copy()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env["PYTHONPATH"] = project_root + os.pathsep + env.get("PYTHONPATH", "")
+    result = subprocess.run(command_as_list, env=env)
     if result.returncode != 0:
         # delete the experiment directory
         experiment_results_dir = get_or_make_export_directory(experiment_dir)
