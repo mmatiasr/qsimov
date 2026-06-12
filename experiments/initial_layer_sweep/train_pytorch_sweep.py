@@ -73,13 +73,20 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
         map_location=device,
     )
     t0 = time.time()
-    ps_linear = PytorchPathSelector(
-        neural_network=base_linear,
-        input_shape=INPUT_SHAPE_NCHW,
-        initial_layer=initial_layer,
-        verbose=1,
-        device=device,
-    )
+    try:
+        ps_linear = PytorchPathSelector(
+            neural_network=base_linear,
+            input_shape=INPUT_SHAPE_NCHW,
+            initial_layer=initial_layer,
+            verbose=1,
+            device=device,
+        )
+    except (ValueError, RuntimeError) as exc:
+        reason = str(exc).split("\n")[0]
+        entry["linear"] = {"status": "invalid_layer", "reason": reason}
+        entry["gradient"] = {"status": "invalid_layer", "reason": reason}
+        print(f"\ninitial_layer={initial_layer}: PathSelector failed — {reason}")
+        return entry
     entry["build_time_linear"] = time.time() - t0
     n_paths = int(ps_linear.output_masks_.sum())
     entry["n_paths"] = n_paths
