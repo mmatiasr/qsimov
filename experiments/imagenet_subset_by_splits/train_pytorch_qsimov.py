@@ -18,6 +18,7 @@ from experiments.path_utils import (
 from experiments.imagenet_subset_by_splits.preprocess_data import (
     load_dataset,
     INPUT_SHAPE_NCHW,
+    NUM_LABELS,
 )
 from experiments.imagenet_subset_by_splits.train_pytorch import (
     TrainModelsParser,
@@ -66,14 +67,16 @@ def execute_logic(results_dir, split, args, device):
 
     train_x = _to_nchw_float32(train_x_raw)
     test_x  = _to_nchw_float32(test_x_raw)
+    train_y_oh = np.eye(NUM_LABELS, dtype=np.float32)[train_y.astype(int)]
+    test_y_oh  = np.eye(NUM_LABELS, dtype=np.float32)[test_y.astype(int)]
 
     model = make_qsimov_model(results_dir, split, args, device)
 
     history = model.fit(
         train_x,
-        train_y.astype(np.float32).reshape(-1, 1),
+        train_y_oh,
         X_val=test_x,
-        Y_val=test_y.astype(np.float32).reshape(-1, 1),
+        Y_val=test_y_oh,
         batch_size=BATCH_SIZE,
         epochs=args.epochs,
         loss_function=nn.CrossEntropyLoss(),
