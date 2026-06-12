@@ -37,7 +37,7 @@ from qsimov.pytorch_qsimov_gradient import PytorchQsimovGradient
 BATCH_SIZE = 64
 EPOCHS_PER_BATCH = 3
 QR_SHRINKAGE = 10
-INITIAL_LAYER = -1
+INITIAL_LAYER = -3
 
 
 def _to_nchw_float32(x_uint8_nhwc):

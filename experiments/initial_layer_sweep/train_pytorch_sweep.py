@@ -1,6 +1,6 @@
 """Sweep initial_layer values for Qsimov PathSelector on ImageNet — PyTorch backend.
 
-Measures for each initial_layer in [-1, -2, -3]:
+Measures for each initial_layer in [-2, -3, -4]:
   - Number of paths and PathSelector build time
   - QsimovLinearSystem accuracy and training time
   - QsimovGradient accuracy and training time
@@ -31,7 +31,7 @@ from qsimov.pytorch_path_selector import PytorchPathSelector
 from qsimov.pytorch_qsimov_linear_system import PytorchQsimovLinearSystem
 from qsimov.pytorch_qsimov_gradient import PytorchQsimovGradient
 
-INITIAL_LAYERS = [-1, -2, -3]
+INITIAL_LAYERS = [-2, -3, -4]
 BATCH_SIZE = 64
 EPOCHS = 5
 QR_SHRINKAGE = 10
