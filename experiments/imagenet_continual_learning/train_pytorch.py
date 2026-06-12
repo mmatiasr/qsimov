@@ -68,17 +68,13 @@ def _val_one_epoch(model, dl, loss_fn, device):
     return total_loss / total, correct / total
 
 
-def train_model(model, x_train, y_train, x_test, y_test, epochs, device, use_onehot=False):
-    if use_onehot:
-        loss_fn = nn.MSELoss()
-        y_tr = np.eye(NUM_LABELS, dtype=np.float32)[y_train.astype(int)]
-        y_te = np.eye(NUM_LABELS, dtype=np.float32)[y_test.astype(int)]
-        y_tr_t = torch.from_numpy(y_tr)
-        y_te_t = torch.from_numpy(y_te)
-    else:
-        loss_fn = nn.CrossEntropyLoss()
-        y_tr_t = torch.from_numpy(y_train.astype(np.int64))
-        y_te_t = torch.from_numpy(y_test.astype(np.int64))
+def train_model(model, x_train, y_train, x_test, y_test, epochs, device):
+    # CrossEntropyLoss works for both softmax and linear outputs.
+    # Linear models (no final softmax) still need integer labels, not one-hot MSE —
+    # PyTorch MSELoss divides by N*C which makes gradients 100x too small for 100-class CE.
+    loss_fn = nn.CrossEntropyLoss()
+    y_tr_t = torch.from_numpy(y_train.astype(np.int64))
+    y_te_t = torch.from_numpy(y_test.astype(np.int64))
 
     x_tr_t = torch.from_numpy(_to_nchw_float32(x_train))
     x_te_t = torch.from_numpy(_to_nchw_float32(x_test))
@@ -112,13 +108,10 @@ def train_model(model, x_train, y_train, x_test, y_test, epochs, device, use_one
 def execute_logic(results_dir, tag, x_train, y_train, x_test, y_test, epochs, device):
     if tag == "path_selector_linear":
         model = path_selector_vgg16_linear()
-        use_onehot = True
     else:
         model = path_selector_vgg16_softmax()
-        use_onehot = False
 
-    history = train_model(model, x_train, y_train, x_test, y_test, epochs, device,
-                          use_onehot=use_onehot)
+    history = train_model(model, x_train, y_train, x_test, y_test, epochs, device)
 
     torch.save(model, f"{results_dir}/vgg16_{tag}_model.pt")
 
@@ -141,7 +134,10 @@ def main(args):
 
     x_train, y_train, x_test, y_test = load_dataset()
 
-    for tag in ("path_selector_softmax", "path_selector_linear"):
+    all_tags = ("path_selector_softmax", "path_selector_linear")
+    tags = [args.model] if args.model else all_tags
+
+    for tag in tags:
         print(f"\n\nTraining {tag} model on FULL data (all classes)\n")
         execute_logic(results_dir, tag, x_train, y_train, x_test, y_test, args.epochs, device)
 
@@ -151,6 +147,12 @@ class TrainModelsParser(argparse.ArgumentParser):
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
         self.add_argument("--processor", choices=["cpu", "gpu"], default="gpu")
         self.add_argument("--epochs", type=int, required=True)
+        self.add_argument(
+            "--model",
+            choices=["path_selector_softmax", "path_selector_linear"],
+            default=None,
+            help="Train only this model (default: train both)",
+        )
 
 
 if __name__ == "__main__":
