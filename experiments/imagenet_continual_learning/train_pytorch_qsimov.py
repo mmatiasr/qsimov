@@ -226,7 +226,7 @@ class TrainQsimovParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         argparse.ArgumentParser.__init__(self, *args, **kwargs)
         self.add_argument("--processor", choices=["cpu", "gpu"], default="gpu")
-        self.add_argument("--initial-layer", type=int, default=-3)
+        self.add_argument("--initial-layer", type=int, default=-2)
 
 
 if __name__ == "__main__":
