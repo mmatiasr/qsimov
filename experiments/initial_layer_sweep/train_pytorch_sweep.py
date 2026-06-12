@@ -130,9 +130,10 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
 
     qg = PytorchQsimovGradient(ps_softmax, verbose=1)
     t0 = time.time()
+    y_onehot = np.eye(NUM_LABELS, dtype=np.float32)[y_train.astype(int)]
     qg.fit(
         x_train,
-        y_train.astype(np.int64),
+        y_onehot,
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         loss_function=nn.CrossEntropyLoss(),
