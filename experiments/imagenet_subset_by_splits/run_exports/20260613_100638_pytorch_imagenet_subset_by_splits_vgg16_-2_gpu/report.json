@@ -1,0 +1,43 @@
+{
+    "info": {
+        "artifact_uri": "file:///home/monronma/qsimov/mlruns/911702885888950847/1659fe645dbb4da4a77604f538c7151f/artifacts",
+        "end_time": null,
+        "experiment_id": "911702885888950847",
+        "lifecycle_stage": "active",
+        "run_id": "1659fe645dbb4da4a77604f538c7151f",
+        "run_name": "pytorch_imagenet_subset_by_splits_vgg16_-2_gpu",
+        "run_uuid": "1659fe645dbb4da4a77604f538c7151f",
+        "start_time": 1781337998818,
+        "status": "RUNNING",
+        "user_id": "mmatiasr",
+        "git_commit": "9c58fff79e559b2a041a2a64117b409f4a294f7d"
+    },
+    "data": {
+        "metrics": {},
+        "params": {
+            "pytorch_models_script": "/experiments/imagenet_subset_by_splits/train_pytorch.py",
+            "plots": "20260613_100638_pytorch_imagenet_subset_by_splits_vgg16_-2_gpu_imagenet_subset_by_splits_vgg16.html",
+            "generated_plots_dir": "/results/imagenet_subset/gradient_by_splits/pytorch/gpu",
+            "plots_script": "/experiments/imagenet_subset_by_splits/plot_gradient_by_splits.py",
+            "model_summary": "/home/monronma/qsimov/results/imagenet_subset/gradient_by_splits/pytorch/gpu/vgg16_model_summary.txt",
+            "model_summary_path_selector": "/home/monronma/qsimov/results/imagenet_subset/gradient_by_splits/pytorch/gpu/vgg16_path_selector_model_summary.txt",
+            "pytorch_models": "1000_split_split_vgg16_model.pt, 5000_split_split_vgg16_model.pt, 10000_split_split_vgg16_model.pt, full_dataset_split_vgg16_model.pt",
+            "number_of_paths": "/home/monronma/qsimov/results/imagenet_subset/gradient_by_splits/pytorch/gpu/number_of_paths_vgg16.txt",
+            "pytorch_path_selector_histories": "1000_split_split_vgg16_path_selector_model_history.pkl, 5000_split_split_vgg16_path_selector_model_history.pkl, 10000_split_split_vgg16_path_selector_model_history.pkl",
+            "data_preparation_script": "/experiments/imagenet_subset_by_splits/preprocess_data.py",
+            "generated_data_dir": "/data/cifar10",
+            "pytorch_path_selector_models": "1000_split_split_vgg16_path_selector_model.pt, 5000_split_split_vgg16_path_selector_model.pt, 10000_split_split_vgg16_path_selector_model.pt",
+            "experiment_execution": "/home/monronma/qsimov/experiments/imagenet_subset_by_splits/main.py --framework pytorch --processor gpu --model-name vgg16 --initial-layer -2 --epochs 10 --splits 1000 5000 10000 --skip-data-preparation --skip-models --skip-path-selector-models",
+            "qsimov_models_script": "/experiments/imagenet_subset_by_splits/train_pytorch_qsimov.py",
+            "pytorch_histories": "1000_split_split_vgg16_model_history.pkl, 5000_split_split_vgg16_model_history.pkl, 10000_split_split_vgg16_model_history.pkl, full_dataset_split_vgg16_model_history.pkl",
+            "qsimov_histories": "1000_split_qsimov_vgg16_history.pkl, 5000_split_qsimov_vgg16_history.pkl, 10000_split_qsimov_vgg16_history.pkl"
+        },
+        "tags": {
+            "mlflow.source.git.commit": "9c58fff79e559b2a041a2a64117b409f4a294f7d",
+            "mlflow.user": "monronma",
+            "mlflow.source.name": "/home/monronma/qsimov/experiments/imagenet_subset_by_splits/main.py",
+            "mlflow.runName": "pytorch_imagenet_subset_by_splits_vgg16_-2_gpu",
+            "mlflow.source.type": "LOCAL"
+        }
+    }
+}
