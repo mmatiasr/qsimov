@@ -44,7 +44,7 @@ def save_results(name, model_name, model, history, results_dir):
 
 
 def accuracy(y_true, y_pred):
-    return float((y_true.argmax(1) == y_pred.argmax(1)).mean())
+    return float((y_true.argmax(1) == y_pred.argmax(1)).float().mean())
 
 
 def make_qsimov_model(results_dir, split, args, device):
