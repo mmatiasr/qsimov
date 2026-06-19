@@ -19,7 +19,7 @@ from experiments.cifar10_gradient_by_splits.train_keras_models import (
 def make_imports():
     global torch, nn, AccumulatedEpochTimeTracker, init_torch, fit
     global create_model, create_dataloader, samples_to_channels_first
-    global get_optimizer, CustomCrossEntropyLoss
+    global get_optimizer, CustomCrossEntropyLoss, CrossEntropyFromLogitsLoss
 
     import torch
     import torch.nn as nn
@@ -29,6 +29,7 @@ def make_imports():
         fit,
         samples_to_channels_first,
         CustomCrossEntropyLoss,
+        CrossEntropyFromLogitsLoss,
     )
     from qsimov.pytorch_qsimov_gradient import AccumulatedEpochTimeTracker
     from experiments.cifar10_gradient_by_splits.pytorch_model_factory import (
@@ -60,9 +61,15 @@ def save_results(name, model_name, model_type, model, history, results_dir):
 
 
 def train_model(model, train_x, train_y, test_x, test_y, device, args):
+    last_layer = list(model.children())[-1]
+    loss_fn = (
+        CustomCrossEntropyLoss()
+        if isinstance(last_layer, (nn.Softmax, nn.LogSoftmax))
+        else CrossEntropyFromLogitsLoss()
+    )
     history = fit(
         model,
-        loss_function=CustomCrossEntropyLoss(),
+        loss_function=loss_fn,
         optimizer=get_optimizer(args.model_name, model.parameters()),
         train_dataloader=create_dataloader(
             train_x, train_y, batch_size=BATCH_SIZE

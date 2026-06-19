@@ -68,7 +68,7 @@ def build_mse_cnn(image_shape, dataset):
     )
 
 
-# Cross entropy custom loss
+# Cross entropy custom loss (for models WITH Softmax output)
 class CustomCrossEntropyLoss(nn.Module):
     def __init__(self, epsilon=1e-7):
         super(CustomCrossEntropyLoss, self).__init__()
@@ -78,6 +78,14 @@ class CustomCrossEntropyLoss(nn.Module):
         input = torch.clamp(input, self.epsilon, 1.0 - self.epsilon)
         loss = torch.sum(-target * torch.log(input), dim=1)
         return torch.mean(loss)
+
+
+# Cross entropy loss for models WITHOUT Softmax (raw logits output)
+class CrossEntropyFromLogitsLoss(nn.Module):
+    def forward(self, input, target):
+        import torch.nn.functional as F
+        log_probs = F.log_softmax(input, dim=1)
+        return torch.mean(-torch.sum(target * log_probs, dim=1))
 
 
 def train_one_epoch(dataloader, model, loss_function, optimizer, device):

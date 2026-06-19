@@ -18,7 +18,7 @@ import multiprocessing as mp
 def make_imports():
     global torch, nn, init_torch, fit, samples_to_channels_first
     global load_dataset, accuracy, get_optimizer
-    global PytorchPathSelector, PytorchQsimovGradient, CustomCrossEntropyLoss
+    global PytorchPathSelector, PytorchQsimovGradient, CrossEntropyFromLogitsLoss
 
     import torch
     import torch.nn as nn
@@ -29,7 +29,7 @@ def make_imports():
         fit,
         accuracy,
         samples_to_channels_first,
-        CustomCrossEntropyLoss,
+        CrossEntropyFromLogitsLoss,
     )
     from experiments.cifar10_gradient_by_splits.preprocess_data import (
         load_dataset,
@@ -69,7 +69,7 @@ def train_model(model, train_x, train_y, test_x, test_y, device, args):
         batch_size=BATCH_SIZE,
         device=device,
         optimizer=lambda params: get_optimizer(args.model_name, params),
-        loss_function=CustomCrossEntropyLoss(),
+        loss_function=CrossEntropyFromLogitsLoss(),
         metrics=[accuracy],
     )
     return history
