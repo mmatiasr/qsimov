@@ -47,7 +47,7 @@ def main(args):
     fit(model, nn.MSELoss(), optimizer, train_dl, val_dl, device, args.epochs)
 
     acc_old = float(np.mean(
-        np.argmax(_predict(model, data["phase1_train_x"], device), axis=1) ==
+        np.argmax(_predict(model, data["test_phase1_x"], device), axis=1) ==
         np.argmax(data["test_phase1_y"], axis=1)
     ))
     acc_new = float(np.mean(
