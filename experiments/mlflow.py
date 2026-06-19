@@ -1,8 +1,9 @@
 import shutil
 import subprocess
 import sys
-import mlflow
 import os
+os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+import mlflow
 import json
 from datetime import datetime
 import experiments.git as git_exp
