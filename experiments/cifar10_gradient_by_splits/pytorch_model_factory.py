@@ -162,6 +162,28 @@ def build_lenet():
     return model
 
 
+def build_path_selector_lenet():
+    """LeNet without final Softmax so PytorchPathSelector gets a linear output
+    and initial_layer=-1 resolves to the last Linear (not the Softmax)."""
+    model = nn.Sequential(
+        nn.Conv2d(3, 20, kernel_size=5, padding=2),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.Conv2d(20, 50, kernel_size=5, padding=2),
+        nn.ReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),
+        nn.Flatten(),
+        nn.Linear(3200, 500),
+        nn.ReLU(),
+        nn.Linear(500, 32),
+        nn.ReLU(),
+        nn.Linear(32, 10),
+    )
+
+    print(model)
+    return model
+
+
 def build_alexnet():
     model = nn.Sequential(
         nn.Conv2d(3, 96, kernel_size=1, stride=1),
@@ -233,7 +255,7 @@ def create_model(name, model_type):
     if name == "alexnet":
         model = build_alexnet()
     elif name == "lenet":
-        model = build_lenet()
+        model = build_path_selector_lenet() if model_type else build_lenet()
     elif name == "vgg16":
         if model_type:
             model = build_path_selector_vgg16()
@@ -268,7 +290,7 @@ def save_initial_weights(model, model_name, model_type, save_path):
 
 def _build_model(model_name, model_type):
     if model_name == "lenet":
-        return build_lenet()
+        return build_path_selector_lenet() if model_type else build_lenet()
     elif model_name == "alexnet":
         return build_alexnet()
     elif model_name == "vgg16":
