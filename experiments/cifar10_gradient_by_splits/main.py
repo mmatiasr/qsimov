@@ -162,10 +162,10 @@ def prepare_data(args):
 
 
 def load_weights(args):
-    script = os.path.join(
-        EXPERIMENT_DIR,
-        "keras_model_factory.py",
-    )
+    if args.framework == "pytorch":
+        script = os.path.join(EXPERIMENT_DIR, "pytorch_model_factory.py")
+    else:
+        script = os.path.join(EXPERIMENT_DIR, "keras_model_factory.py")
     # where weights are saved in the script
     script_weights_dir = (
         get_cifar10_gradient_by_splits_results_initial_weights_dir()

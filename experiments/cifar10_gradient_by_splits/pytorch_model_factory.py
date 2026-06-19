@@ -2,6 +2,9 @@ import torch.nn as nn
 from torchvision import models
 import torch
 import pickle
+import os
+import argparse
+import numpy as np
 from experiments.path_utils import (
     get_cifar10_gradient_by_splits_results_initial_weights_dir,
 )
@@ -242,3 +245,50 @@ def create_model(name, model_type):
     weights_dir = get_cifar10_gradient_by_splits_results_initial_weights_dir()
     model = load_weights_pytorch_format(model, name, model_type, weights_dir)
     return model
+
+
+def save_initial_weights(model, model_name, model_type, save_path):
+    weights = {"conv": [], "dense": []}
+    for layer in model.children():
+        if isinstance(layer, nn.Conv2d):
+            weights["conv"].append((
+                layer.weight.data.cpu().numpy().copy(),
+                layer.bias.data.cpu().numpy().copy(),
+            ))
+        elif isinstance(layer, nn.Linear):
+            weights["dense"].append((
+                layer.weight.data.cpu().numpy().copy(),
+                layer.bias.data.cpu().numpy().copy(),
+            ))
+    os.makedirs(save_path, exist_ok=True)
+    with open(f"{save_path}/{model_name}{model_type}_weights.pkl", "wb") as f:
+        pickle.dump(weights, f, protocol=5)
+    print(f"Saved weights: {save_path}/{model_name}{model_type}_weights.pkl")
+
+
+def _build_model(model_name, model_type):
+    if model_name == "lenet":
+        return build_lenet()
+    elif model_name == "alexnet":
+        return build_alexnet()
+    elif model_name == "vgg16":
+        return build_path_selector_vgg16() if model_type else build_vgg16()
+    else:
+        raise ValueError(f"Unknown model name: {model_name}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", required=True)
+    args = parser.parse_args()
+
+    torch.manual_seed(42)
+    weights_dir = get_cifar10_gradient_by_splits_results_initial_weights_dir()
+
+    for model_type in ("", "_path_selector"):
+        model = _build_model(args.model_name, model_type)
+        save_initial_weights(model, args.model_name, model_type, weights_dir)
+
+
+if __name__ == "__main__":
+    main()
