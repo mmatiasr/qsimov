@@ -21,7 +21,7 @@ cpdef c_make_square_system(
 ):
     cdef np.ndarray[BOOL_t, ndim=2] is_zero
     cdef np.ndarray[BOOL_t, ndim=1] all_zero
-    cdef np.ndarray[np.int_t, ndim=1] consecutive_zeros
+    cdef np.ndarray[np.intp_t, ndim=1] consecutive_zeros
     cdef np.ndarray[FTYPE_t, ndim=2] A_new
     cdef np.ndarray[FTYPE_t, ndim=1] b_new
     cdef int previous_unknown
