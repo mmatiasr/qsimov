@@ -1,5 +1,4 @@
 # Import libraries
-import tensorflow as tf
 import numpy as np
 import os
 from experiments.path_utils import get_qsimov_home
@@ -58,22 +57,34 @@ def concat_batches(list_batches):
 if __name__ == "__main__":
     # set random seed
     SEED = 42
-    tf.keras.utils.set_random_seed(SEED)
+    np.random.seed(SEED)
 
     # Define the directory of the files
     QSIMOV_HOME = get_qsimov_home()
     DATA_DIR = os.path.join(QSIMOV_HOME, "data/mnist")
     os.makedirs(DATA_DIR, exist_ok=True)
 
-    # Load mnist dataset from tensorflow
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    # Load mnist dataset from torchvision (no TensorFlow required)
+    import torchvision
+    train_ds = torchvision.datasets.MNIST(root=DATA_DIR, train=True,  download=True)
+    test_ds  = torchvision.datasets.MNIST(root=DATA_DIR, train=False, download=True)
+
+    x_train = np.array(train_ds.data,   dtype=np.float32)
+    y_train = np.array(train_ds.targets, dtype=np.int64)
+    x_test  = np.array(test_ds.data,    dtype=np.float32)
+    y_test  = np.array(test_ds.targets,  dtype=np.int64)
 
     x_train = x_train.reshape(list(x_train.shape) + [1]).astype(np.float32)
-    x_test = x_test.reshape(list(x_test.shape) + [1]).astype(np.float32)
+    x_test  = x_test.reshape(list(x_test.shape)   + [1]).astype(np.float32)
 
-    # Preprocess labels to use one hot encoding
-    y_train = np.array(tf.one_hot(y_train, depth=10), dtype=np.float32)
-    y_test = np.array(tf.one_hot(y_test, depth=10), dtype=np.float32)
+    # One-hot encoding with numpy
+    def one_hot(y, depth=10):
+        out = np.zeros((len(y), depth), dtype=np.float32)
+        out[np.arange(len(y)), y] = 1.0
+        return out
+
+    y_train = one_hot(y_train)
+    y_test  = one_hot(y_test)
 
     # Normalize values of inputs to be between 0 and 1
     x_train = x_train / 255.0
