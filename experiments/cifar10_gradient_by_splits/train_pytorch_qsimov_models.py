@@ -79,7 +79,7 @@ def load_base_model(results_dir, model_name, split):
     # model name corresponding to the split
     model_file = f"{split_to_name(split)}_path_selector_{model_name}_model.pt"
 
-    return torch.load(os.path.join(results_dir, model_file))
+    return torch.load(os.path.join(results_dir, model_file), weights_only=False)
 
 
 def make_qsimov_model(results_dir, split, input_shape, device, args):

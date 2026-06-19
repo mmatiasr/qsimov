@@ -93,7 +93,7 @@ def train_qsimov_model(
     learning_rate,
 ):
     # Load a model trained with half of the dataset
-    partial_model = torch.load(f"{output_dir}/crossentropy_half_model.pt")
+    partial_model = torch.load(f"{output_dir}/crossentropy_half_model.pt", weights_only=False)
     qsimov_gradient = PytorchQsimovGradient(
         PytorchPathSelector(
             neural_network=partial_model,

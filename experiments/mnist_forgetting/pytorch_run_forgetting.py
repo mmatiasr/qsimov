@@ -56,7 +56,7 @@ def save_results(method, results, results_dir):
 
 
 def load_base(base_model_path, device):
-    model = torch.load(base_model_path, map_location=device)
+    model = torch.load(base_model_path, map_location=device, weights_only=False)
     model.eval()
     return model
 

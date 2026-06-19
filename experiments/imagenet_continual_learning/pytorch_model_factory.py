@@ -58,4 +58,4 @@ def get_optimizer(model_name, is_qsimov=False):
 
 def load_model(results_dir, tag):
     """Load saved .pt model. tag ∈ {'path_selector_softmax', 'path_selector_linear', 'standard'}."""
-    return torch.load(f"{results_dir}/vgg16_{tag}_model.pt")
+    return torch.load(f"{results_dir}/vgg16_{tag}_model.pt", weights_only=False)

@@ -49,7 +49,7 @@ def accuracy(y_true, y_pred):
 
 def make_qsimov_model(results_dir, split, args, device):
     model_file = f"{split_to_name(split)}_path_selector_{args.model_name}_model.pt"
-    base_model = torch.load(os.path.join(results_dir, model_file), map_location=device)
+    base_model = torch.load(os.path.join(results_dir, model_file), map_location=device, weights_only=False)
 
     path_selector = PytorchPathSelector(
         neural_network=base_model,

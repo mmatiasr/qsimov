@@ -177,7 +177,7 @@ def execute_logic(method, results_dir, args, device):
         base_model = torch.load(
             f"{results_dir}/vgg16_path_selector_linear_model.pt",
             map_location=device,
-        )
+        , weights_only=False)
         path_selector = PytorchPathSelector(
             neural_network=base_model,
             input_shape=INPUT_SHAPE_NCHW,
@@ -193,7 +193,7 @@ def execute_logic(method, results_dir, args, device):
         base_model = torch.load(
             f"{results_dir}/vgg16_path_selector_softmax_model.pt",
             map_location=device,
-        )
+        , weights_only=False)
         path_selector = PytorchPathSelector(
             neural_network=base_model,
             input_shape=INPUT_SHAPE_NCHW,

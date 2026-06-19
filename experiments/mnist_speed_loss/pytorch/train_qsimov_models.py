@@ -165,7 +165,7 @@ def train_qsimov_models(
             # load model based on loss function and dataset portion
             current_models = models[loss_idx]
             model_name = current_models[partial_idx]
-            model = torch.load(f"{output_dir}/{model_name}_model.pt")
+            model = torch.load(f"{output_dir}/{model_name}_model.pt", weights_only=False)
 
             path_selector = PytorchPathSelector(
                 neural_network=model,

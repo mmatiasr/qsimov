@@ -99,7 +99,7 @@ def _convert_rounds(rounds):
 
 
 def _load_standard_model(results_dir, device):
-    return torch.load(f"{results_dir}/vgg16_standard_model.pt", map_location=device)
+    return torch.load(f"{results_dir}/vgg16_standard_model.pt", map_location=device, weights_only=False)
 
 
 def execute_logic_finetune(results_dir, rounds_nchw, test_x, test_y, device):

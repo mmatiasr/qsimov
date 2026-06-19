@@ -71,7 +71,7 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
     base_linear = torch.load(
         f"{cl_results_dir}/vgg16_path_selector_linear_model.pt",
         map_location=device,
-    )
+    , weights_only=False)
     t0 = time.time()
     try:
         ps_linear = PytorchPathSelector(
@@ -124,7 +124,7 @@ def run_one_layer(initial_layer, x_train, y_train, x_test, y_test,
     base_softmax = torch.load(
         f"{cl_results_dir}/vgg16_path_selector_softmax_model.pt",
         map_location=device,
-    )
+    , weights_only=False)
     t0 = time.time()
     ps_softmax = PytorchPathSelector(
         neural_network=base_softmax,

@@ -84,7 +84,7 @@ def run_qsimov_linear_accum(batches, cl_results_dir, results_dir, device):
     base_model = torch.load(
         f"{cl_results_dir}/vgg16_path_selector_linear_model.pt",
         map_location=device,
-    )
+    , weights_only=False)
     path_selector = PytorchPathSelector(
         neural_network=base_model,
         input_shape=INPUT_SHAPE_NCHW,
@@ -139,7 +139,7 @@ def run_qsimov_gradient(batches, cl_results_dir, results_dir, device):
     base_model = torch.load(
         f"{cl_results_dir}/vgg16_path_selector_softmax_model.pt",
         map_location=device,
-    )
+    , weights_only=False)
     path_selector = PytorchPathSelector(
         neural_network=base_model,
         input_shape=INPUT_SHAPE_NCHW,
@@ -222,7 +222,7 @@ def _predict_standard(model, x_nchw, device):
 
 
 def run_standard_finetune(batches, cl_results_dir, results_dir, device):
-    model = torch.load(f"{cl_results_dir}/vgg16_standard_model.pt", map_location=device)
+    model = torch.load(f"{cl_results_dir}/vgg16_standard_model.pt", map_location=device, weights_only=False)
     results = {"batches": []}
 
     for b, batch in enumerate(batches):
@@ -265,7 +265,7 @@ def run_standard_cumulative(batches, cl_results_dir, results_dir, device):
         cx = np.concatenate(cum_x)
         cy = np.concatenate(cum_y)
 
-        model = torch.load(f"{cl_results_dir}/vgg16_standard_model.pt", map_location=device)
+        model = torch.load(f"{cl_results_dir}/vgg16_standard_model.pt", map_location=device, weights_only=False)
 
         t0 = time.time()
         _train_standard_one_round(model, cx, cy, device, EPOCHS_PER_BATCH)

@@ -177,4 +177,4 @@ def clone_model_with_weights(model):
     torch.save(model, os.path.join(temp_path, "model.pt"))
 
     # Load the model from the temporary location
-    return torch.load(os.path.join(temp_path, "model.pt"))
+    return torch.load(os.path.join(temp_path, "model.pt"), weights_only=False)
