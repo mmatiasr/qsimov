@@ -1,5 +1,7 @@
-import argparse
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import argparse
 import experiments.git as exp_git
 import experiments.mlflow as exp_mlflow
 import mlflow
