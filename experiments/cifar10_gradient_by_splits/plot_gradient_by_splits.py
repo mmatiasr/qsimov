@@ -1,4 +1,6 @@
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import pickle
 from experiments.path_utils import (
     get_cifar10_gradient_by_splits_results_dir as get_results_dir,
