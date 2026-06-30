@@ -1,0 +1,124 @@
+% Capítulo 3: Especificación del Sistema
+
+\section{Definición de requisitos}
+
+\subsection{Requisitos funcionales}
+
+\paragraph{RF-01} El sistema debe permitir seleccionar un punto de corte en la red base (capa
+\texttt{initial\_layer}) a partir del cual se aplica el algoritmo Qsimov.
+
+\paragraph{RF-02} El sistema debe enumerar todos los caminos activos entre la capa
+\texttt{initial\_layer} y la salida de la red, para capas de tipo Dense, Conv1D/2D/3D y
+MaxPooling1D/2D/3D con activación ReLU.
+
+\paragraph{RF-03} Dado un conjunto de muestras de entrenamiento, el sistema debe generar el sistema
+de ecuaciones lineales $Ax = b$ donde cada fila representa la contribución de una muestra a los
+pesos de los caminos.
+
+\paragraph{RF-04} El sistema debe resolver el sistema lineal mediante back-substitution (solución
+exacta) o mínimos cuadrados (solución aproximada).
+
+\paragraph{RF-05} El sistema debe permitir acumular ecuaciones de distintas rondas de entrenamiento
+sin resetear el sistema, implementando así el mecanismo de no-olvido.
+
+\paragraph{RF-06} El sistema debe implementar una variante basada en descenso de gradiente sobre
+una capa densa restringida a los caminos activos.
+
+\paragraph{RF-07} El sistema debe ser compatible con los frameworks TensorFlow/Keras y PyTorch.
+
+\paragraph{RF-08} El sistema debe permitir guardar y cargar modelos entrenados en un formato propio
+(directorios \texttt{.qsi}).
+
+\subsection{Requisitos no funcionales}
+
+\paragraph{RNF-01 (Rendimiento)} Las operaciones de extracción de coeficientes y generación de
+caminos deben estar optimizadas con extensiones Cython compiladas.
+
+\paragraph{RNF-02 (Compatibilidad)} La librería debe funcionar con Python 3.8 y las versiones
+TensorFlow 2.11 y PyTorch 2.0.
+
+\paragraph{RNF-03 (Modularidad)} Las implementaciones para Keras y PyTorch deben compartir clases
+base abstractas que definan la interfaz pública.
+
+\paragraph{RNF-04 (Testeabilidad)} Todas las clases principales deben tener cobertura de tests
+unitarios e integración ejecutables con \texttt{pytest}.
+
+\section{Especificación del sistema}
+
+El sistema se organiza en torno a tres componentes principales, cuya relación se describe a
+continuación:
+
+\begin{figure}[htbp]
+  \centering
+\begin{verbatim}
+              +-------------------------------+
+              |   Red base pre-entrenada      |
+              | (Keras Sequential / PyTorch)  |
+              +---------------+---------------+
+                              |
+              +---------------v---------------+
+              |         PathSelector           |
+              |  - left_model_  (hasta i_layer)|
+              |  - right_model_ (desde i_layer)|
+              |  - all_paths_                  |
+              |  - samples_to_coefficients()   |
+              +---------------+---------------+
+                              |
+          +-------------------+-------------------+
+          |                                       |
++---------v-----------+               +-----------v-----------+
+|  QsimovLinearSystem |               |    QsimovGradient     |
+|  - fit() (acumul.)  |               |  - fit() (por epochs) |
+|  - predict()        |               |  - predict()          |
+|  - reset_equations()|               |  - model_ (CustomDens)|
++---------------------+               +-----------------------+
+\end{verbatim}
+  \caption{Diagrama de componentes del sistema Qsimov.}
+  \label{fig:componentes}
+\end{figure}
+
+\section{Planificación y estimación de costes}
+
+\subsection{Planificación}
+
+El desarrollo del proyecto se ha estructurado en cinco fases principales:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Planificación del proyecto.}
+  \label{tab:planificacion}
+  \begin{tabular}{cp{8.5cm}c}
+    \toprule
+    \textbf{Fase} & \textbf{Descripción} & \textbf{Duración estimada} \\
+    \midrule
+    F1 & Revisión bibliográfica y estudio del estado del arte                       & 3 semanas \\
+    F2 & Comprensión de la librería Qsimov y configuración del entorno experimental & 3 semanas \\
+    F3 & Diseño de los experimentos y selección de configuraciones                  & 2 semanas \\
+    F4 & Ejecución de experimentos y análisis de resultados                         & 8 semanas \\
+    F5 & Redacción de la memoria y preparación de la defensa                        & 3 semanas \\
+    \midrule
+    \textbf{Total} & & \textbf{19 semanas} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Estimación de costes}
+
+\textbf{Coste de personal} (estimación a precio de junior en prácticas, 15\,€/h; tarifa orientativa
+para el sector TIC en España, acorde al convenio colectivo de empresas de ingeniería y consultoría
+para titulados recientes):
+\begin{itemize}
+  \item 19 semanas $\times$ 25 h/semana = 475\,h
+  \item Coste: 475\,h $\times$ 15\,€/h = \textbf{7.125\,€}
+\end{itemize}
+
+\textbf{Coste de hardware}:
+\begin{itemize}
+  \item Uso de GPU (NVIDIA, estimación de servidor cloud): $\sim$80\,h $\times$ 0.5\,€/h =
+        \textbf{40\,€}
+\end{itemize}
+
+\textbf{Software}: Todas las herramientas utilizadas (Python, TensorFlow, PyTorch, Cython) son de
+código abierto y gratuitas. Coste: \textbf{0\,€}
+
+\textbf{Coste total estimado: 7.165\,€}

@@ -1,0 +1,88 @@
+% Capítulo 1: Introducción y Motivación
+% Cubre las secciones 1 y 2 de la memoria
+
+\section{Introducción}
+
+Las redes neuronales profundas dominan actualmente el estado del arte en tareas de visión por
+computador, procesamiento del lenguaje natural y reconocimiento de patrones. Sin embargo, el
+paradigma dominante de entrenamiento (procesar todos los datos de una vez con acceso
+irrestricto) resulta inapropiado en muchos escenarios reales. Los datos llegan de forma
+secuencial, los recursos computacionales son limitados, y las restricciones de privacidad o
+almacenamiento impiden conservar todos los datos históricos. En este contexto surge el campo del
+\textbf{aprendizaje continuo} (\textit{continual learning}), cuyo objetivo es que un modelo aprenda
+de nuevos datos sin olvidar los conocimientos previos.
+
+El obstáculo principal de este campo es el \textbf{olvido catastrófico}
+(\textit{catastrophic forgetting}), descrito por primera vez de forma sistemática por McCloskey y
+Cohen en 1989~\cite{ref1}. Cuando una red neuronal es re-entrenada sobre nuevas muestras mediante
+descenso de gradiente, la actualización de sus pesos interfiere destructivamente con las
+representaciones aprendidas anteriormente, de forma mucho más severa que el olvido observado en
+sistemas biológicos.
+
+La mayoría de las soluciones propuestas en la literatura (regularización, expansión de
+arquitectura, o replay de datos generados) introducen compromisos entre plasticidad (capacidad de
+aprender cosas nuevas) y estabilidad (capacidad de retener las anteriores), y frecuentemente
+requieren almacenar ejemplos pasados o aumentar la complejidad del modelo con cada nueva tarea.
+
+Este trabajo evalúa Qsimov, una librería que implementa un enfoque alternativo basado en una
+propiedad matemática de las redes con activación ReLU: para cualquier entrada, la función que
+computa la red es \textbf{lineal} en la región del espacio que contiene a esa entrada. Cada entrada
+traza un <<camino>> único a través de la red, determinado por qué neuronas están activas ($> 0$) y
+cuáles no. Qsimov separa la estructura de esos caminos, aprendida durante el pre-entrenamiento,
+de los pesos asociados a cada camino, que se resuelven analíticamente mediante un sistema de
+ecuaciones lineales. La acumulación incremental de ecuaciones a lo largo del tiempo garantiza que el
+sistema <<recuerde>> todas las rondas de entrenamiento sin necesidad de acceder a los datos
+originales.
+
+El presente documento describe el funcionamiento de Qsimov y los experimentos realizados para
+evaluar su comportamiento en escenarios de aprendizaje continual, siguiendo la estructura
+recomendada para trabajos de fin de grado de ingeniería en informática~\cite{ref2}.
+
+\section{Motivación y Objetivos}
+
+\subsection{Motivación}
+
+La motivación del proyecto nace de una observación fundamental sobre la naturaleza del entrenamiento
+de redes neuronales con activación ReLU. Una red feed-forward con ReLU define, implícitamente, una
+partición del espacio de entrada en regiones lineales: dentro de cada región, la función que computa
+la red es una transformación lineal afín~\cite{ref3}. Esa transformación queda completamente
+determinada por el subconjunto de neuronas que están activas para las entradas de esa región, es
+decir, por el <<camino activo>> de la muestra.
+
+Esta propiedad tiene una consecuencia directa para el re-entrenamiento: si se fijan los parámetros
+que determinan \textit{qué} caminos existen (los pesos del modelo base, aprendidos durante el
+pre-entrenamiento), el problema de encontrar los pesos óptimos para esos caminos se reduce a
+resolver un sistema de ecuaciones lineales. Y un sistema lineal puede ampliarse con nuevas
+ecuaciones en cualquier momento, incorporando nuevas muestras o nuevas clases, sin que las
+soluciones previas se destruyan, siempre que las ecuaciones antiguas permanezcan en el sistema.
+
+Frente a las soluciones existentes basadas en penalizaciones (EWC~\cite{ref4}, SI~\cite{ref5}) o
+en expansión de arquitectura (PNN~\cite{ref6}), Qsimov ofrece garantías exactas de no-olvido para
+las muestras incluidas en el sistema, sin requerir hiperparámetros adicionales y sin aumentar el
+tamaño de la red.
+
+\subsection{Objetivos}
+
+Los objetivos del proyecto son los siguientes:
+
+El objetivo principal del proyecto es evaluar experimentalmente la librería Qsimov en escenarios de
+aprendizaje continual, caracterizando su comportamiento frente al olvido catastrófico y
+comparándolo con métodos de re-entrenamiento estándar.
+
+Los objetivos secundarios son:
+
+\begin{enumerate}
+  \item Comprender el funcionamiento de los componentes principales de Qsimov
+        (\texttt{PathSelector}, \texttt{QsimovLinearSystem}, \texttt{QsimovGradient}) y su API de
+        uso.
+  \item Diseñar y ejecutar experimentos de evaluación sobre tres \textit{benchmarks} de distinta
+        escala y complejidad: MNIST, CIFAR-10 e ImageNet (100 clases).
+  \item Comparar el rendimiento de Qsimov (variante de sistema lineal y variante de gradiente) con
+        métodos de referencia: fine-tuning estándar y re-entrenamiento acumulado.
+  \item Analizar el impacto del punto de corte (\texttt{initial\_layer}) sobre la precisión
+        obtenida y el número de caminos generados.
+  \item Evaluar la robustez al learning rate del módulo de gradiente frente al re-entrenamiento
+        estándar.
+  \item Identificar los escenarios en los que Qsimov ofrece ventajas claras y aquellos en los que
+        presenta limitaciones.
+\end{enumerate}

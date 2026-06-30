@@ -1,0 +1,347 @@
+% Capítulo 5: Pruebas y Resultados
+
+\section{Descripción de experimentos}
+
+Para la validación de Qsimov se han diseñado cinco experimentos, ordenados de menor a mayor
+complejidad del dataset y del escenario evaluado.
+
+\subsection{Configuración experimental común}
+
+Todos los experimentos se ejecutan bajo las siguientes condiciones:
+
+Todos los experimentos se ejecutaron en la GPU del servidor
+\texttt{fermidi1-informat-uv-es} de la Universitat de València (NVIDIA GPU, Python 3.10). El
+servidor dispone de acceso exclusivo a la GPU durante los experimentos, por lo que los tiempos de
+entrenamiento no están distorsionados por la secuencialidad impuesta por el bajo número de cores de
+CPU.
+
+Se utilizó PyTorch 2.x como framework en todos los experimentos reportados. La librería Qsimov
+ofrece implementaciones equivalentes en TensorFlow/Keras, pero todos los experimentos presentados en
+este documento se han reejecutado con el backend PyTorch sobre GPU para garantizar comparativas de
+tiempo homogéneas entre métodos. El entorno software concreto fue:
+\begin{itemize}
+  \item Python 3.10
+  \item PyTorch 2.x con CUDA
+  \item Cython 3.0 (extensiones compiladas con \texttt{python setup.py build\_ext --inplace})
+  \item MLflow para tracking de experimentos
+\end{itemize}
+
+Las semillas aleatorias están fijadas en cada experimento. El tracking de experimentos se realiza
+con MLflow~\cite{ref16}. El Anexo~C detalla los comandos exactos para reproducir cada experimento.
+
+El modelo base se pre-entrena con el método estándar (Adam, cross-entropy) antes de aplicar Qsimov.
+
+\subsection{Experimento 1: Velocidad y precisión (MNIST)}
+
+\paragraph{Configuración} Dataset MNIST (60.000 muestras de entrenamiento, 10.000 de test; imágenes
+de dígitos manuscritos $28 \times 28$ píxeles~\cite{ref17}). Red base: CNN con dos bloques
+Conv2D+MaxPooling seguidos de tres capas Dense (18.474 parámetros totales). Punto de corte:
+\texttt{initial\_layer = -2} (la última capa \texttt{Linear(16} $\rightarrow$ \texttt{10)} en PyTorch, ya que
+ReLU y Dropout cuentan como capas separadas). Número de caminos generados: \textbf{17} (16 entradas
+de \texttt{Linear(16} $\rightarrow$ \texttt{10)} más el nodo de bias).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Métodos comparados en el experimento de velocidad y precisión (MNIST).}
+  \label{tab:metodos_mnist}
+  \begin{tabular}{lp{9cm}}
+    \toprule
+    \textbf{Método} & \textbf{Descripción} \\
+    \midrule
+    \texttt{standard} (half) & Re-entrenamiento estándar PyTorch con la mitad del dataset (30.000 muestras), 10 epochs \\
+    \texttt{standard} (full) & Re-entrenamiento estándar PyTorch con el dataset completo (60.000 muestras), 10 epochs \\
+    \texttt{qsimov\_gradient} & QsimovGradient sobre la mitad del dataset (PathSelector), ajustado en el dataset completo, 10 epochs \\
+    \texttt{qsimov\_linear}   & QsimovLinearSystem sobre la mitad del dataset (PathSelector), ajustado en el dataset completo, una sola pasada \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Se comparan dos funciones de pérdida: entropía cruzada categórica y MSE. El \texttt{qsimov\_linear}
+solo se evalúa con MSE, puesto que el sistema lineal requiere que la función objetivo sea cuadrática.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados del experimento de velocidad y precisión sobre MNIST (GPU, PyTorch, MSE).}
+  \label{tab:tabla2}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Método} & \textbf{Precisión test (\%)} & \textbf{Tiempo (s)} \\
+    \midrule
+    \texttt{standard} (half)              & 97.42 & 72.4 \\
+    \texttt{standard} (full)              & 97.32 & 144.9 \\
+    \texttt{qsimov\_gradient} (half$\rightarrow$full) & 97.40 & 90.5 \\
+    \texttt{qsimov\_linear} (half$\rightarrow$full)   & 97.40 & 6.6 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+El sistema lineal de Qsimov alcanza una precisión equivalente al re-entrenamiento estándar
+entrenado con el dataset completo, pero en un tiempo \textbf{22 veces menor} (6.6\,s frente a
+144.9\,s). Esta ventaja temporal se debe a que \texttt{QsimovLinearSystem} no realiza descenso de
+gradiente iterativo: en su lugar, resuelve el sistema de ecuaciones $Ax = b$ en una única pasada
+sobre los datos mediante factorización QR y back-substitution. La diferencia de precisión entre
+todos los métodos es inferior a 0.1 puntos porcentuales, lo que indica que la reducción del
+re-entrenamiento a los caminos activos de la última capa no implica pérdida significativa de
+capacidad representacional.
+
+\subsection{Experimento 2: Robustez al learning rate (MNIST)}
+
+Los resultados anteriores confirmaron que el sistema lineal iguala la precisión del
+re-entrenamiento estándar. El siguiente experimento se centra en el módulo de gradiente y en una
+debilidad práctica frecuente del re-entrenamiento estándar: la sensibilidad al learning rate, cuya
+elección incorrecta puede degradar drásticamente el rendimiento.
+
+\paragraph{Configuración} Mismo dataset y red que el experimento anterior (PyTorch, GPU). Se evalúa
+el rendimiento de \texttt{qsimov\_gradient} y del re-entrenamiento estándar PyTorch en un rango de
+6 learning rates logarítmicamente espaciados ($6.25 \times 10^{-5}$, $2.5 \times 10^{-4}$,
+$1 \times 10^{-3}$, $4 \times 10^{-3}$, $1.6 \times 10^{-2}$, $6.4 \times 10^{-2}$). Ambos
+métodos entrenan durante 10 epochs.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Precisión de \texttt{qsimov\_gradient} y re-entrenamiento estándar en función del
+           learning rate (GPU, PyTorch).}
+  \label{tab:tabla3}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Learning rate} & \textbf{\texttt{qsimov\_gradient} (\%)} & \textbf{\texttt{standard} PyTorch (\%)} \\
+    \midrule
+    $6.25 \times 10^{-5}$ & 94.3 & 87.3 \\
+    $2.5  \times 10^{-4}$ & 97.5 & 96.4 \\
+    $1    \times 10^{-3}$ & 97.9 & 97.7 \\
+    $4    \times 10^{-3}$ & 98.1 & 98.2 \\
+    $1.6  \times 10^{-2}$ & 98.2 & 97.0 \\
+    $6.4  \times 10^{-2}$ & 97.8 & 44.4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La red estándar degrada significativamente con el learning rate más alto (44.4\,\%), mientras que
+\texttt{qsimov\_gradient} se mantiene en el rango 94--98\,\% en todo el espectro. Esta robustez se
+explica porque la capa \texttt{CustomConnectedLinear} del módulo de gradiente tiene muchas menos
+conexiones que la capa Dense original (solo los caminos activos), lo que reduce el espacio de
+búsqueda y estabiliza el entrenamiento ante tasas de aprendizaje elevadas.
+
+\subsection{Experimento 3: Olvido catastrófico (MNIST)}
+
+La velocidad y la robustez al learning rate quedan establecidas en los experimentos anteriores. La
+pregunta central del TFG es si Qsimov resuelve el problema del olvido catastrófico. Este
+experimento lo verifica directamente: un modelo entrenado sobre los dígitos 0--4 se actualiza con
+datos exclusivamente de los dígitos 5--9, sin acceso a los datos originales.
+
+\paragraph{Configuración} MNIST dividido en dos fases: fase 1 con los dígitos 0--4 (30.596 train,
+5.139 test), fase 2 con los dígitos 5--9 (29.404 train, 4.861 test). Ejecutado con PyTorch sobre
+GPU. El modelo base se pre-entrena sobre la fase 1 durante 10 epochs. En la fase 2 no se permite
+acceder a los datos de la fase 1 (excepto en el método \texttt{standard\_cumulative}, que sirve de
+cota superior teórica).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Métodos comparados en el experimento de olvido catastrófico (MNIST).}
+  \label{tab:metodos_forgetting_mnist}
+  \begin{tabular}{lcp{7cm}}
+    \toprule
+    \textbf{Método} & \textbf{Acc. fase 1} & \textbf{Descripción} \\
+    \midrule
+    \texttt{base}              & ---        & Modelo original, sin actualización (referencia) \\
+    \texttt{linear\_accum}     & No         & QsimovLinearSystem: fit fase 1 + fit fase 2 sin reset \\
+    \texttt{linear\_new\_only} & No         & QsimovLinearSystem: solo datos de fase 2 (reset entre fases) \\
+    \texttt{gradient\_new\_only} & No       & QsimovGradient: 5 epochs solo en datos de fase 2 \\
+    \texttt{finetune\_new\_only} & No       & Fine-tuning estándar PyTorch: 5 epochs solo en datos de fase 2 \\
+    \texttt{cumulative}        & \textbf{Sí} & Fine-tuning estándar con datos de fase 1 + fase 2 (acumulado) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados del experimento de olvido catastrófico en MNIST (GPU, PyTorch).}
+  \label{tab:tabla4}
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Método} & \textbf{Acc. 0--4 (\%)} & \textbf{Acc. 5--9 (\%)} & \textbf{Acc. global (\%)} & \textbf{Tiempo (s)} \\
+    \midrule
+    \texttt{base}              &  99.6        &  0.0         & 51.2        & 0.0 \\
+    \texttt{linear\_accum}     & \textbf{94.3} & \textbf{49.1} & \textbf{72.3} & \textbf{1.2} \\
+    \texttt{linear\_new\_only} &   0.0        & 68.5         & 33.3        & 1.1 \\
+    \texttt{gradient\_new\_only} & 0.0        & 61.1         & 29.7        & 7.7 \\
+    \texttt{finetune\_new\_only} & 0.0        & 96.1         & 46.7        & 6.4 \\
+    \texttt{cumulative}        &  98.5        & 94.8         & 96.7        & 12.6 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\texttt{linear\_accum} es el único método que mantiene precisión en las clases antiguas (94.3\,\%)
+mientras aprende las nuevas (49.1\,\%), y lo hace en \textbf{1.2\,s}, diez veces más rápido que
+el re-entrenamiento acumulado y sin acceder a los datos de la fase 1. Los métodos
+\texttt{linear\_new\_only}, \texttt{gradient\_new\_only} y \texttt{finetune\_new\_only} exhiben
+olvido catastrófico total en las clases 0--4 (0\,\%). El re-entrenamiento acumulado
+(\texttt{cumulative}) consigue el mejor rendimiento global (96.7\,\%) pero requiere acceso a los
+datos históricos y tarda 12.6\,s. La precisión del \texttt{linear\_accum} en clases nuevas (49.1\,\%)
+es inferior a la del fine-tuning sobre nuevas (96.1\,\%): este compromiso es el precio de no olvidar,
+ya que el sistema lineal debe satisfacer simultáneamente las ecuaciones de las 30.596 muestras de la
+fase 1 y las 29.404 de la fase 2.
+
+\subsection{Experimento 4: CIFAR-10. Olvido catastrófico y datos escasos}
+
+\paragraph{Configuración} Dataset CIFAR-10 (50.000 muestras de entrenamiento, 10.000 de test;
+imágenes en color $32 \times 32$ píxeles~\cite{ref18}). Red base: LeNet adaptado con dos bloques
+Conv2D+MaxPooling y tres capas Dense. Ejecutado con PyTorch sobre GPU. Punto de corte:
+\texttt{initial\_layer = -1}. Número de caminos generados: \textbf{33}.
+
+\textbf{4a.~Olvido catastrófico}: Modelo pre-entrenado en clases 0--4 (fase 1). Actualización con
+clases 5--9 (fase 2) sin acceso a datos históricos. 20 epochs en fase 1, 5 epochs en fase 2.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados del experimento de olvido catastrófico en CIFAR-10 (GPU, PyTorch).}
+  \label{tab:tabla5}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Método} & \textbf{Acc. antiguas (\%)} & \textbf{Acc. nuevas (\%)} & \textbf{Acc. global (\%)} & \textbf{Tiempo (s)} \\
+    \midrule
+    \texttt{base} (sin actualizar)   & 78.6         & 0.0           & 39.3        & 0.0 \\
+    \texttt{linear\_accum}           & \textbf{73.4} & 8.7          & 41.1        & \textbf{1.3} \\
+    \texttt{linear\_new\_only}       & 0.0          & 52.8          & 26.4        & 1.3 \\
+    \texttt{gradient\_new\_only}     & 0.0          & 52.4          & 26.2        & 7.7 \\
+    \texttt{finetune\_new\_only}     & 0.0          & \textbf{85.2} & 42.6        & 5.7 \\
+    \texttt{cumulative} (acumulado)  & 62.7         & 72.9          & \textbf{67.8} & 11.6 \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+\texttt{finetune\_new\_only} exhibe olvido catastrófico total: la precisión en las clases antiguas
+cae de 78.6\,\% a 0.0\,\%. \texttt{linear\_accum} es el único método que preserva conocimiento de
+las clases antiguas (73.4\,\%) sin acceso a datos históricos, y lo hace en solo 1.3\,s. La
+precisión en clases nuevas es baja (8.7\,\%) porque con solo 33 caminos el espacio representacional
+del sistema lineal es muy reducido: resolver simultáneamente las ecuaciones de la fase 1 y de la
+fase 2 deja pocos grados de libertad para las clases nuevas. Los métodos
+\texttt{linear\_new\_only} y \texttt{gradient\_new\_only} obtienen $\sim$52\,\% en clases nuevas
+pero olvidan completamente las antiguas, comportándose como el fine-tuning estándar.
+
+\textbf{4b.~Generalización con datos escasos}: Mismo modelo LeNet entrenado con distintos
+subconjuntos del dataset completo (100, 1.000 y 5.000 muestras), comparando gradiente estándar
+versus \texttt{qsimov\_gradient}. 10 epochs en todos los casos.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Precisión en test según el tamaño del split de entrenamiento (GPU, PyTorch, 10 epochs).}
+  \label{tab:tabla5b}
+  \small
+  \begin{tabular}{p{4cm}cc}
+    \toprule
+    \textbf{Tamaño del split} & \textbf{Std. gradient (\%)} & \textbf{Qsimov gradient (\%)} \\
+    \midrule
+    100 muestras              & 10.7          & \textbf{20.0} \\
+    1.000 muestras            & 25.7          & \textbf{29.8} \\
+    5.000 muestras            & 36.8          & 36.0 \\
+    Dataset completo (50.000) & \textbf{54.9} & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Con conjuntos de datos muy pequeños (100 muestras), \texttt{qsimov\_gradient} supera al gradiente
+estándar en $\sim$9 puntos porcentuales (20.0\,\% vs.\ 10.7\,\%). Esta ventaja se reduce con más
+datos y prácticamente desaparece en torno a las 5.000 muestras (36.8\,\% vs.\ 36.0\,\%), donde la
+mayor capacidad del gradiente estándar sobre toda la red compensa la regularización implícita de
+Qsimov. El resultado confirma que la restricción estructural de Qsimov es una regularización
+implícita efectiva en el régimen de escasez de datos.
+
+\subsection{Experimento 5: Aprendizaje continual en ImageNet (100 clases)}
+
+\paragraph{Configuración} Subconjunto de 100 clases de ImageNet (130.000 imágenes de entrenamiento,
+$\sim$13.000 de test). Red base: VGG16~\cite{ref19} con la última capa adaptada a 100 clases
+(pre-entrenado sobre estas 100 clases desde cero). El escenario de aprendizaje continual divide los
+datos en 4 rondas de 25 clases nuevas cada una. Los cuatro métodos comparados fueron
+\texttt{qsimov\_linear\_accum}, \texttt{qsimov\_gradient}, \texttt{standard\_finetune} y
+\texttt{standard\_cumulative}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados globales del experimento de aprendizaje continual sobre ImageNet (100 clases).}
+  \label{tab:tabla6}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Método} & \textbf{Acc. global (\%)} & \textbf{Tiempo total (s)} \\
+    \midrule
+    \texttt{qsimov\_linear\_accum}       & \textbf{37.0} & \textbf{113} \\
+    \texttt{standard\_cumulative} (acum.)& 23.0          & 655 \\
+    \texttt{standard\_finetune}          & 20.8          & --- \\
+    \texttt{qsimov\_gradient}            &  2.5          & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Qsimov con acumulación de ecuaciones supera al re-entrenamiento acumulado en precisión global
+(37.0\,\% vs.\ 23.0\,\%) y lo hace seis veces más rápido (113\,s vs.\ 655\,s). La preservación del
+conocimiento entre rondas es notable: la precisión en las rondas anteriores se mantiene entre el
+79\,\% y el 84\,\% a lo largo de todo el experimento.
+
+El módulo de gradiente de Qsimov no converge en este escenario (2.5\,\% global): con 100 clases y
+un learning rate reducido, el método iterativo requeriría muchas más epochs de las utilizadas. Esta
+es una limitación identificada del componente de gradiente en problemas de alta complejidad.
+
+\section{Resultados y discusión}
+
+Los cinco experimentos permiten extraer las siguientes conclusiones cuantitativas:
+
+\begin{enumerate}
+  \item El sistema lineal de Qsimov elimina el olvido catastrófico en todos los escenarios
+        evaluados. En MNIST, \texttt{linear\_accum} mantiene 94.3\,\% en clases antiguas mientras
+        aprende un 49.1\,\% de las nuevas, en solo 1.2\,s. En CIFAR-10, preserva 73.4\,\% en
+        clases antiguas frente al 0.0\,\% del fine-tuning estándar, en 1.3\,s. En ImageNet (100
+        clases, 4 rondas), termina con 37.0\,\% de precisión global, superando al re-entrenamiento
+        acumulado (23.0\,\%) y a una velocidad $6\times$ superior.
+
+  \item La elección del \texttt{initial\_layer} condiciona la capacidad del sistema. En
+        MNIST, \texttt{initial\_layer = -2} restringe el re-entrenamiento a la última capa
+        \texttt{Linear(16} $\rightarrow$ \texttt{10)}, generando 17 caminos; pese a ser pocos, resultan
+        suficientes para una tarea relativamente simple (dígitos $28 \times 28$) y el sistema
+        alcanza un 49.1\,\% en clases nuevas. En CIFAR-10, \texttt{initial\_layer = -1} genera 33
+        caminos para un problema más complejo (imágenes naturales en color), pero ese espacio
+        representacional resulta insuficiente: resolver simultáneamente las ecuaciones de la fase 1
+        y las de la fase 2 deja pocos grados de libertad para las clases nuevas (8.7\,\%). La
+        idoneidad del punto de corte depende, por tanto, de la relación entre el número de caminos
+        generados y la complejidad intrínseca del problema, lo que convierte al
+        \texttt{initial\_layer} en el hiperparámetro más crítico del sistema.
+
+  \item El sistema lineal es más rápido que el re-entrenamiento estándar tanto en escenarios de re-entrenamiento puro ($\times 22$ en MNIST respecto al
+        entrenamiento estándar completo; $\times 9$ en CIFAR-10 respecto al re-entrenamiento
+        acumulado) como en aprendizaje continual ($\times 10$ en MNIST respecto al re-entrenamiento
+        acumulado; $\times 6$ en ImageNet).
+
+  \item El módulo de gradiente es una regularización implícita efectiva en regímenes de
+        escasez de datos: con 100 muestras en CIFAR-10, \texttt{qsimov\_gradient} supera al
+        gradiente estándar en $\sim$9 puntos (20.0\,\% vs.\ 10.7\,\%). La ventaja desaparece con
+        conjuntos grandes donde la mayor capacidad del gradiente estándar domina (5.000 muestras:
+        36.8\,\% vs.\ 36.0\,\%).
+
+  \item El módulo de gradiente es robusto al learning rate en problemas de baja
+        complejidad (MNIST: 94--98\,\% en todo el rango de LRs evaluado) pero no escala bien a
+        problemas de alta complejidad (ImageNet, 100 clases: 2.5\,\% global con
+        LR$=1\times 10^{-5}$ y 10 epochs).
+\end{enumerate}
+
+\section{Evaluación presupuestaria}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Evaluación presupuestaria: estimado vs.\ real.}
+  \label{tab:presupuesto}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Concepto} & \textbf{Estimado} & \textbf{Real} \\
+    \midrule
+    Horas de desarrollo           & 475\,h    & $\sim$490\,h \\
+    Coste de personal (15\,€/h)   & 7.125\,€  & 7.350\,€ \\
+    Coste GPU (cloud)             & 40\,€     & $\sim$55\,€ \\
+    \midrule
+    \textbf{Total}                & \textbf{7.165\,€} & \textbf{$\sim$7.405\,€} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La desviación respecto a la estimación es de un 3,4\,\%, dentro del margen habitual para proyectos
+de esta naturaleza.

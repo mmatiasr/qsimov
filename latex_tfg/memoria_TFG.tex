@@ -1,0 +1,151 @@
+\documentclass[twoside,spanish,a4paper,12pt]{tfg}
+
+\titulacion{Grado en Ingeniería Informática}
+\title{Qsimov: Re-entrenamiento Incremental sin Olvido Catastrófico en Redes Neuronales con Activación ReLU}
+\authorlabel{Autor}
+\author{Matías Moncho Ronda}
+\tutorlabel{Tutor}
+\tutor{Dr. Juan Manuel Orduña\\\hspace*{5cm}Huertas}
+\convocatoria{Julio 2026}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\setlength{\emergencystretch}{60pt}
+\DeclareUrlCommand\bpath{\urlstyle{tt}\def\UrlFont{\bfseries\ttfamily}}
+
+\AtBeginDocument{\shorthandoff{"}\catcode`\'=12}
+
+\begin{document}
+
+\portada
+\cleardoublepage
+\contraportada
+\cleardoublepage
+\ia
+\cleardoublepage
+
+% ---- Resumen en español ----
+\begin{resumen}
+El aprendizaje continuo en redes neuronales artificiales choca con un problema estructural conocido
+como olvido catastrófico: cuando una red es re-entrenada con nuevas muestras, el ajuste de sus pesos
+destruye el conocimiento previamente adquirido. Este trabajo evalúa \textbf{Qsimov}, una librería
+Python existente que aborda este problema mediante la explotación de la estructura lineal por tramos
+que inducen las activaciones ReLU en redes feed-forward.
+
+La idea central consiste en representar el comportamiento de las últimas capas de una red
+pre-entrenada en términos de sus \textbf{caminos activos}: las combinaciones de conexiones entre
+neuronas que permanecen activas para cada muestra dada. Esta representación transforma el
+re-entrenamiento en la resolución de un sistema de ecuaciones lineales cuyas incógnitas son los pesos
+de los caminos, y no los pesos individuales de la red original. Gracias a esta reformulación, es
+posible acumular las ecuaciones de distintas rondas de entrenamiento sin necesidad de acceder a los
+datos anteriores, eliminando así el olvido.
+
+La librería ofrece dos mecanismos de re-entrenamiento: resolución directa mediante el sistema lineal
+(variante más rápida) y descenso de gradiente sobre una capa completamente conectada restringida a
+los caminos activos (variante más flexible). Ambos se implementan sobre TensorFlow/Keras y PyTorch
+con extensiones en Cython para las operaciones más costosas.
+
+Los experimentos, realizados sobre MNIST, CIFAR-10 e ImageNet con 100 clases, demuestran que el
+sistema lineal con acumulación de ecuaciones elimina el olvido catastrófico en todos los escenarios
+evaluados: mantiene 94.3\,\% de precisión en clases antiguas en MNIST (frente al 0.0\,\% del
+fine-tuning estándar), 73.4\,\% en CIFAR-10, y entre el 79\,\% y el 84\,\% en rondas previas sobre
+ImageNet, todo ello entre seis y diez veces más rápido que el re-entrenamiento acumulado estándar.
+
+\end{resumen}
+\cleardoublepage
+
+% ---- Abstract en inglés ----
+\begin{abstract}
+Continual learning in artificial neural networks is hindered by a structural problem known as
+catastrophic forgetting: when a network is retrained on new samples, the weight updates destroy
+previously acquired knowledge. This work evaluates \textbf{Qsimov}, an existing Python library that
+addresses this problem by exploiting the piecewise-linear structure induced by ReLU activations in
+feed-forward networks.
+
+The core idea is to represent the behaviour of the final layers of a pre-trained network in terms of
+their \textbf{active paths}: the combinations of neuron connections that remain active for each given
+sample. This representation transforms retraining into solving a linear system of equations whose
+unknowns are the path weights, not the individual weights of the original network. Thanks to this
+reformulation, equations from different training rounds can be accumulated without requiring access
+to previous data, thereby eliminating forgetting.
+
+The library offers two retraining mechanisms: direct solving via the linear system (faster variant)
+and gradient descent over a fully connected layer restricted to the active paths (more flexible
+variant). Both are implemented for TensorFlow/Keras and PyTorch, with Cython extensions for the most
+computationally intensive operations.
+
+Experiments conducted on MNIST, CIFAR-10 and ImageNet with 100 classes demonstrate that the linear
+system with equation accumulation eliminates catastrophic forgetting in all evaluated scenarios: it
+maintains 94.3\,\% accuracy on old classes in MNIST (versus 0.0\,\% for standard fine-tuning),
+73.4\,\% in CIFAR-10, and between 79\,\% and 84\,\% in previous rounds on ImageNet, all between
+six and ten times faster than standard cumulative retraining.
+
+\end{abstract}
+\cleardoublepage
+
+% ---- Resum en valencià ----
+\begin{resum}
+L'aprenentatge continu en xarxes neuronals artificials es troba amb un problema estructural conegut
+com a oblit catastròfic: quan una xarxa és re-entrenada amb noves mostres, l'ajust dels seus pesos
+destrueix el coneixement prèviament adquirit. Aquest treball avalua \textbf{Qsimov}, una llibreria
+Python existent que aborda aquest problema mitjançant l'explotació de l'estructura lineal a trams que
+indueixen les activacions ReLU en xarxes feed-forward.
+
+La idea central consisteix a representar el comportament de les últimes capes d'una xarxa
+pre-entrenada en termes dels seus \textbf{camins actius}: les combinacions de connexions entre
+neurones que romanen actives per a cada mostra donada. Aquesta representació transforma el
+re-entrenament en la resolució d'un sistema d'equacions lineals les incògnites de les quals són els
+pesos dels camins, i no els pesos individuals de la xarxa original. Gràcies a aquesta reformulació,
+és possible acumular les equacions de distintes rondes d'entrenament sense necessitat d'accedir a les
+dades anteriors, eliminant així l'oblit.
+
+La llibreria ofereix dos mecanismes de re-entrenament: resolució directa mitjançant el sistema lineal
+(variant més ràpida) i descens del gradient sobre una capa completament connectada restringida als
+camins actius (variant més flexible). Tots dos s'implementen sobre TensorFlow/Keras i PyTorch amb
+extensions en Cython per a les operacions més costoses.
+
+Els experiments, realitzats sobre MNIST, CIFAR-10 i ImageNet amb 100 classes, demostren que el
+sistema lineal amb acumulació d'equacions elimina l'oblit catastròfic en tots els escenaris avaluats:
+manté un 94.3\,\% de precisió en classes antigues en MNIST (enfront del 0.0\,\% del fine-tuning
+estàndard), un 73.4\,\% en CIFAR-10, i entre el 79\,\% i el 84\,\% en rondes prèvies sobre
+ImageNet, tot plegat entre sis i deu vegades més ràpid que el re-entrenament acumulat estàndard.
+
+\end{resum}
+\cleardoublepage
+
+\tableofcontents
+
+\pagestyle{tfg}
+\justify
+
+\chapter{Introducción y Motivación}
+\input{tex/cap1_introduccion.tex}
+
+\chapter{Estado del Arte}
+\input{tex/cap2_estado_arte.tex}
+
+\chapter{Especificación del Sistema}
+\input{tex/cap3_especificacion.tex}
+
+\chapter{Desarrollo del Proyecto}
+\input{tex/cap4_desarrollo.tex}
+
+\chapter{Pruebas y Resultados}
+\input{tex/cap5_pruebas.tex}
+
+\chapter{Conclusiones y Trabajo Futuro}
+\input{tex/cap6_conclusiones.tex}
+
+\pagestyle{appendix}
+
+\appendix
+\chapter{Anexos}
+\input{tex/apendices.tex}
+
+\addcontentsline{toc}{chapter}{Referencias}
+\bibliographystyle{unsrt}
+\bibliography{bib/bibliografia}
+
+\end{document}

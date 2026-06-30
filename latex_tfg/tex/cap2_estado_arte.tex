@@ -1,0 +1,128 @@
+% Capítulo 2: Estado del Arte
+
+\section{El problema del olvido catastrófico}
+
+El olvido catastrófico fue caracterizado por primera vez de forma rigurosa por McCloskey y
+Cohen~\cite{ref1} y Ratcliff~\cite{ref7}, que demostraron experimentalmente cómo incluso un
+entrenamiento mínimo sobre nueva información borraba casi por completo las representaciones
+previamente aprendidas en modelos conexionistas. A diferencia del olvido humano, que es gradual y
+selectivo, el olvido en redes artificiales es abrupto y masivo: basta con actualizar los pesos
+mediante descenso de gradiente sobre un nuevo conjunto de datos para que el rendimiento en los datos
+anteriores caiga drásticamente.
+
+La raíz del problema reside en la naturaleza distribuida de las representaciones en redes
+neuronales: los mismos pesos participan en la codificación de múltiples patrones, de modo que su
+modificación para adaptarse a los nuevos datos necesariamente interfiere con los antiguos. Este
+conflicto entre capacidad de aprender cosas nuevas y capacidad de retener las ya aprendidas se
+denomina el \textbf{dilema estabilidad-plasticidad}~\cite{ref8}.
+
+\section{Taxonomía de soluciones}
+
+Las estrategias para mitigar el olvido catastrófico se agrupan en tres grandes familias~\cite{ref9}:
+
+\subsection{Métodos basados en regularización}
+
+Estos métodos añaden un término de penalización a la función de pérdida para evitar que los pesos
+más importantes para las tareas anteriores cambien demasiado. El más influyente es \textbf{EWC}
+(\textit{Elastic Weight Consolidation}, Kirkpatrick et al., 2017)~\cite{ref4}, que usa la diagonal
+de la matriz de información de Fisher como medida de la importancia de cada peso. Formalmente, la
+función de pérdida para la tarea B es:
+
+\begin{lstlisting}
+L_B(theta) = L_B_orig(theta) + (lambda/2) * Sum_i F_i * (theta_i - theta*_A,i)^2
+\end{lstlisting}
+
+donde $\theta^*_A$ son los pesos óptimos para la tarea A, $F_i$ es la importancia del peso $i$, y
+$\lambda$ controla el equilibrio entre plasticidad y estabilidad. \textbf{SI} (\textit{Synaptic
+Intelligence}, Zenke et al., 2017)~\cite{ref5} estima las importancias de forma online durante el
+entrenamiento, evitando el coste computacional del cálculo de la Fisher.
+
+El principal inconveniente de estos métodos es que la penalización es solo una aproximación: no
+garantizan la ausencia total de olvido, y la importancia calculada sobre una tarea puede no ser
+compatible con las importancias calculadas sobre múltiples tareas sucesivas.
+
+\subsection{Métodos basados en repetición (\textit{replay})}
+
+Estos métodos mantienen una memoria de ejemplos pasados (reales o generados) que se mezclan con los
+datos nuevos durante el re-entrenamiento. El \textbf{replay exacto} almacena directamente
+subconjuntos de datos históricos (\textit{coreset methods}), con el coste de violar potencialmente
+restricciones de privacidad o almacenamiento. El \textbf{replay generativo} (Shin et
+al., 2017)~\cite{ref10} usa un modelo generativo (típicamente una GAN) entrenado sobre las tareas
+pasadas para sintetizar ejemplos artificiales que se mezclan con los datos nuevos.
+
+El replay generativo elimina la necesidad de almacenar datos reales, pero introduce un nuevo modelo
+que debe entrenarse a su vez de forma continua, trasladando el problema del olvido al generador.
+
+\subsection{Métodos basados en arquitectura}
+
+Estos métodos modifican la estructura de la red para aislar el conocimiento de cada tarea. Las
+\textbf{Redes Neuronales Progresivas} (PNN, Rusu et al., 2016)~\cite{ref6} añaden una columna nueva
+a la red para cada tarea nueva, con conexiones laterales a las columnas anteriores, pero congelando
+los pesos previos. Esto garantiza que las tareas antiguas no se olvidan, pero el tamaño del modelo
+crece linealmente con el número de tareas.
+
+Los métodos basados en máscaras binarias (\textit{PackNet}, Mallya y Lazebnik, 2018~\cite{ref11};
+\textit{HAT}, Serrà et al., 2018~\cite{ref12}) reservan subconjuntos de pesos para cada tarea, pero
+requieren conocer el número de tareas de antemano y tienen una capacidad finita.
+
+\section{Linealidad local de redes ReLU}
+
+Una propiedad matemática fundamental de las redes con activación ReLU es que definen funciones
+\textbf{continuas y lineales a tramos}: para una entrada dada, la composición de transformaciones
+afines y funciones ReLU resulta en una transformación lineal afín en la región convexa del espacio
+de entrada que contiene a esa muestra~\cite{ref3}. Esta región queda determinada por el
+\textbf{patrón de activación} binario: el vector que indica qué neuronas tienen salida positiva y
+cuáles cero.
+
+Esta propiedad ha sido estudiada desde la perspectiva de la capacidad representacional (las redes
+ReLU profundas pueden generar un número de regiones lineales exponencial con la
+profundidad~\cite{ref3}) y más recientemente desde la perspectiva del análisis de
+robustez~\cite{ref13}. Qsimov explota esta propiedad de forma constructiva: en lugar de analizar
+las regiones lineales de la red completa, extrae y enumera los \textbf{caminos de conexión activos}
+entre capas, que son la representación dual de las regiones lineales cuando se consideran las
+conexiones capa a capa.
+
+\section{Sistemas lineales para re-entrenamiento}
+
+La idea de reformular el entrenamiento de redes neuronales como un problema de mínimos cuadrados es
+clásica en el contexto de las capas de salida. La técnica \textbf{LWTA} (\textit{Local Winner Takes
+All}, Srivastava et al., 2013~\cite{ref14}) y los métodos de \textbf{extreme learning machines}
+(ELM, Huang et al., 2006~\cite{ref15}) fijan los pesos de las capas ocultas aleatoriamente y
+entrenan solo la última capa con mínimos cuadrados. Qsimov se distingue de estos enfoques en que
+los pesos del modelo base no son aleatorios sino pre-entrenados, y en que la representación lineal
+no se aplica solo a la última capa sino a una secuencia de capas cuyo punto de inicio es
+configurable.
+
+\section{Resumen y posicionamiento de Qsimov}
+
+La tabla siguiente sitúa Qsimov en relación con las principales aproximaciones al aprendizaje
+continuo:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Comparativa de métodos de aprendizaje continuo.}
+  \label{tab:comparativa}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Método} & \textbf{Sin datos previos} & \textbf{Sin arq. creciente} & \textbf{Garantía no-olvido} & \textbf{Velocidad} \\
+    \midrule
+    Fine-tuning estándar            & \checkmark & \checkmark & $\times$              & Alta \\
+    EWC~\cite{ref4}                 & \checkmark & \checkmark & Parcial               & Media \\
+    Replay exacto                   & $\times$   & \checkmark & Parcial               & Baja \\
+    Replay generativo~\cite{ref10}  & \checkmark & $\times$   & Parcial               & Baja \\
+    PNN~\cite{ref6}                 & \checkmark & $\times$   & \checkmark            & Media \\
+    \textbf{Qsimov (sist. lineal)}  & \checkmark & \checkmark & \checkmark (datos vis.) & Muy alta \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+Qsimov es el único método en esta comparativa que combina ausencia de necesidad de datos históricos,
+tamaño de modelo constante, garantía exacta de no-olvido para los datos incluidos, y actualización
+de coste prácticamente constante independientemente del histórico acumulado.
+
+El hueco que ocupa Qsimov en el panorama actual es, por tanto, la intersección de tres propiedades
+que hasta ahora no se daban simultáneamente en ningún método revisado: no necesitar acceso a datos
+pasados, no aumentar la arquitectura y ofrecer garantía formal de no-olvido. El presente trabajo
+evalúa empíricamente si estas propiedades teóricas se traducen en ventajas medibles en escenarios de
+referencia estándar.

@@ -1,0 +1,64 @@
+% Capítulo 6: Conclusiones y Trabajo Futuro
+
+\section{Conclusiones}
+
+Este trabajo ha evaluado experimentalmente Qsimov, una librería Python para re-entrenamiento
+incremental sin olvido catastrófico en redes neuronales con activación ReLU. La contribución central
+de este TFG es la caracterización experimental del comportamiento de Qsimov sobre MNIST, CIFAR-10
+e ImageNet (100 clases), analizando las condiciones bajo las cuales su mecanismo de acumulación de
+ecuaciones lineales elimina el olvido catastrófico.
+
+Los resultados confirman que:
+
+\begin{itemize}
+  \item El sistema lineal de Qsimov supera a todos los métodos comparados en el escenario de
+        aprendizaje continual sobre ImageNet, con un 37.0\,\% de precisión global frente al 23.0\,\%
+        del re-entrenamiento acumulado y el 20.8\,\% del fine-tuning estándar.
+  \item El tiempo de actualización del sistema lineal permanece prácticamente constante
+        ($\approx$5.8\,s por batch en el experimento de streaming de ImageNet),
+        independientemente del número de clases ya aprendidas.
+  \item La robustez al learning rate del módulo de gradiente es notable en problemas de baja
+        complejidad, eliminando la necesidad de ajuste fino de este hiperparámetro.
+\end{itemize}
+
+El principal factor limitante identificado es el número de caminos generados por el PathSelector,
+que depende directamente del punto de corte elegido y de la densidad de la red base. En redes con
+pocas neuronas antes de la capa de salida (CIFAR-10 con 33 caminos), el espacio representacional
+puede no ser suficiente para aprender nuevas clases sin comprometer la capacidad en las antiguas.
+
+Los resultados obtenidos son representativos de redes feed-forward con activación ReLU que incluyen
+capas densas en su parte final, que es la arquitectura para la que Qsimov está diseñado. Cabe
+esperar un comportamiento análogo en otras redes que cumplan estas condiciones, dado que el
+mecanismo de acumulación de ecuaciones es agnóstico al dominio del problema. La extrapolación a
+arquitecturas con conexiones residuales (ResNet, EfficientNet) o a modelos basados en atención
+(Transformers) requeriría extender el módulo de generación de caminos y no puede garantizarse sin
+evaluación experimental adicional.
+
+\section{Trabajo futuro}
+
+Las siguientes líneas de mejora se identifican como prioritarias para el trabajo futuro:
+
+\begin{enumerate}
+  \item \textbf{Selección automática del \texttt{initial\_layer}}: Diseñar un criterio cuantitativo
+        (por ejemplo, basado en el número de caminos o en la complejidad del problema) que guíe la
+        elección del punto de corte de forma automática, reduciendo la necesidad de conocimiento
+        experto sobre la arquitectura.
+
+  \item \textbf{Soporte para arquitecturas con conexiones residuales} (ResNet, EfficientNet): Las
+        conexiones \textit{skip} rompen la estructura secuencial de caminos asumida por la
+        implementación actual. Extender el módulo \texttt{paths/} para manejar estas arquitecturas
+        ampliaría considerablemente el ámbito de aplicación.
+
+  \item \textbf{Métricas de evaluación más completas}: Los experimentos actuales se centran en
+        precisión global y tiempo. Añadir métricas de uso de memoria, análisis de la distribución
+        de pesos de caminos, y curvas de estabilidad-plasticidad permitiría una evaluación más
+        rigurosa.
+
+  \item \textbf{Convergencia del módulo de gradiente en alta complejidad}: Explorar estrategias de
+        warm-start, normalización por lotes, o ajuste adaptativo del learning rate para hacer
+        converger el módulo de gradiente en escenarios de 100 o más clases.
+
+  \item \textbf{Benchmarks adicionales}: Evaluar Qsimov sobre benchmarks estándar de aprendizaje
+        continual como Split-CIFAR-100, Permuted-MNIST, o CORe50, para comparar cuantitativamente
+        con métodos como EWC o iCaRL en condiciones homologables.
+\end{enumerate}

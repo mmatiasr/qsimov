@@ -1,0 +1,344 @@
+% Apéndices
+
+\section{Anexo A: Instalación y configuración del entorno}
+
+\begin{lstlisting}[language=bash, caption={Instalación del entorno de desarrollo.}]
+# Clonar el repositorio
+git clone <repo_url>
+cd qsimov
+
+# Crear entorno virtual con Python 3.8
+python3.8 -m venv venv
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Compilar extensiones Cython (obligatorio antes del primer uso)
+python setup.py build_ext --inplace
+\end{lstlisting}
+
+\section{Anexo B: Ejemplo de uso completo (Keras, aprendizaje continual)}
+
+\begin{lstlisting}[language=Python, caption={Ejemplo completo de aprendizaje continual con Keras.}]
+import numpy as np
+import tensorflow.keras as kr
+from qsimov.keras_path_selector import KerasPathSelector
+from qsimov.keras_qsimov_linear_system import KerasQsimovLinearSystem
+
+# 1. Pre-entrenar modelo con datos de la fase 1
+model = kr.Sequential([
+    kr.layers.Conv2D(32, 3, activation='relu', input_shape=(28, 28, 1)),
+    kr.layers.MaxPooling2D(),
+    kr.layers.Flatten(),
+    kr.layers.Dense(16, activation='relu'),
+    kr.layers.Dense(10, activation='softmax'),
+])
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+model.fit(x_phase1, y_phase1, epochs=10)
+
+# 2. Crear PathSelector sobre el modelo entrenado
+path_selector = KerasPathSelector(
+    neural_network=model,
+    initial_layer=-2,   # dos ultimas capas Dense
+    verbose=1
+)
+
+# 3. Entrenar QsimovLinearSystem con fase 1
+qls = KerasQsimovLinearSystem(
+    path_selector=path_selector,
+    solver="back_substitution",
+    absolute_cutoff=1e-2,
+    relative_cutoff=1e6,
+)
+qls.fit(x_phase1, y_phase1, batch_size=256)
+
+# 4. Actualizar con fase 2 sin olvido (NO llamar reset_equations())
+qls.fit(x_phase2, y_phase2, batch_size=256)
+
+# 5. Evaluar en ambas fases
+acc_old = np.mean(qls.predict(x_test_phase1).argmax(1) == y_test_phase1)
+acc_new = np.mean(qls.predict(x_test_phase2).argmax(1) == y_test_phase2)
+print(f"Precision clases antiguas: {acc_old:.3f}")
+print(f"Precision clases nuevas:   {acc_new:.3f}")
+\end{lstlisting}
+
+\section{Anexo C: Guía de reproducibilidad}
+
+Esta sección describe de forma precisa el entorno, la secuencia de instalación y los comandos
+exactos necesarios para reproducir todos los experimentos presentados en este documento.
+
+\subsection{C.1 Entorno de ejecución}
+
+\textbf{Hardware}: Servidor \texttt{fermidi1-informat-uv-es}, Universitat de València. GPU NVIDIA
+disponible en el nodo de cómputo.
+
+\textbf{Software}:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Versiones del entorno software.}
+  \label{tab:software}
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Componente} & \textbf{Versión} \\
+    \midrule
+    Python              & 3.10 \\
+    PyTorch             & 2.x (con CUDA) \\
+    TensorFlow / Keras  & 2.11 (solo para experimentos Keras) \\
+    NumPy               & 1.21 \\
+    Cython              & 3.0 \\
+    MLflow              & 2.x \\
+    Plotly              & 5.x \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{C.2 Instalación del entorno}
+
+\begin{lstlisting}[language=bash, caption={Configuración del entorno desde cero.}]
+# 1. Clonar el repositorio del proyecto
+git clone <url_repositorio>
+cd qsimov
+
+# 2. Crear entorno virtual Python 3.10
+python3.10 -m venv venv
+source venv/bin/activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+
+# 4. Compilar las extensiones Cython (OBLIGATORIO antes del primer uso)
+#    Sin este paso, las importaciones del modulo paths/ fallaran.
+python setup.py build_ext --inplace
+\end{lstlisting}
+
+\subsection{C.3 Descarga y preprocesado de datos}
+
+Cada experimento descarga y preprocesa sus propios datos automáticamente si no se especifica
+\texttt{--skip-data-preparation}. Los datasets se almacenan en \texttt{data/} dentro del directorio
+del proyecto. Para ImageNet es necesario proporcionar los archivos descargados previamente (ver
+\texttt{experiments/imagenet\_subset\_by\_splits/preprocess\_data.py}).
+
+\subsection{C.4 Comandos de ejecución por experimento}
+
+Todos los comandos se ejecutan desde la raíz del directorio \texttt{qsimov/} con el entorno virtual
+activo. Los resultados (modelos, historiales, gráficas HTML) se guardan en \texttt{results/} y un
+resumen del experimento en \texttt{experiments/<nombre>/run\_exports/}.
+
+\textbf{Experimento 1: Velocidad y precisión (MNIST)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/mnist_speed_loss/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --epochs 10
+\end{lstlisting}
+
+Resultados en: \path{results/mnist/learning_rate_speed_loss/pytorch/gpu/}
+
+\textbf{Experimento 2: Robustez al learning rate (MNIST)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/mnist_learning_rate/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --epochs 10
+\end{lstlisting}
+
+Resultados en: \path{results/mnist/learning_rate_speed_loss/pytorch/gpu/}
+
+\textbf{Experimento 3: Olvido catastrófico (MNIST)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/mnist_forgetting/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --base-epochs 10 \
+    --epochs 5
+\end{lstlisting}
+
+Resultados en: \texttt{results/mnist/forgetting/pytorch/gpu/}
+
+\textbf{Experimento 4: Datos escasos y splits (CIFAR-10)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/cifar10_gradient_by_splits/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --model_name lenet \
+    --initial-layer -1 \
+    --epochs 10 \
+    --splits 100 1000 5000
+\end{lstlisting}
+
+Resultados en: \texttt{results/cifar10/gradient\_by\_splits/pytorch/gpu/}
+
+\textbf{Experimento 5: Olvido catastrófico (CIFAR-10)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/cifar10_forgetting/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --base-epochs 20 \
+    --epochs 5
+\end{lstlisting}
+
+Resultados en: \texttt{results/cifar10/forgetting/pytorch/gpu/}
+
+\textbf{Experimento 6: Comparativa de splits (ImageNet-100)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/imagenet_subset_by_splits/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --model-name vgg16 \
+    --initial-layer -2 \
+    --epochs 10 \
+    --splits 1000 5000 10000
+\end{lstlisting}
+
+Resultados en: \path{results/imagenet_subset/gradient_by_splits/pytorch/gpu/}
+
+\textbf{Experimento 7: Aprendizaje continual incremental (ImageNet-100)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/imagenet_continual_learning/main.py \
+    --framework pytorch \
+    --processor gpu \
+    --epochs 10
+\end{lstlisting}
+
+Resultados en: \path{results/imagenet_subset/continual_learning/pytorch/gpu/}
+
+\textbf{Experimento 8: Barrido de initial\_layer (ImageNet-100)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/initial_layer_sweep/main.py \
+    --framework pytorch \
+    --processor gpu
+\end{lstlisting}
+
+Resultados en: \path{results/imagenet_subset/initial_layer_sweep/pytorch/gpu/}
+
+\textbf{Experimento 9: Streaming incremental de clases (ImageNet-100)}
+
+\begin{lstlisting}[language=bash]
+python3 experiments/imagenet_streaming_incremental/main.py \
+    --framework pytorch \
+    --processor gpu
+\end{lstlisting}
+
+Resultados en: \path{results/imagenet_subset/streaming_incremental/pytorch/gpu/}
+
+\subsection{C.5 Consulta de resultados}
+
+Los resultados de cada ejecución se registran automáticamente en MLflow. Para visualizar el panel de
+MLflow:
+
+\begin{lstlisting}[language=bash]
+mlflow ui --port 5000
+\end{lstlisting}
+
+Acceder en el navegador a \texttt{http://localhost:5000}. Cada experimento aparece bajo su nombre
+(\texttt{mnist\_speed\_loss}, \texttt{mnist\_learning\_rate}, etc.) con todos los parámetros de
+ejecución registrados.
+
+Las gráficas HTML generadas pueden abrirse directamente en cualquier navegador sin servidor
+adicional.
+
+\section{Anexo D: Software desarrollado}
+
+Además de la librería Qsimov (preexistente), este TFG ha requerido el desarrollo de un conjunto de
+scripts de experimentación. A continuación se describen los módulos principales desarrollados,
+agrupados por experimento.
+
+\subsection{D.1 Módulo de infraestructura de experimentos}
+
+\bpath{experiments/mlflow.py}: Utilidades de orquestación
+MLflow: \texttt{run\_script()} (ejecuta subprocesos capturando stdout/stderr y registrando el
+resultado en MLflow), \texttt{get\_or\_make\_export\_directory()} (crea el directorio
+\texttt{run\_exports/<timestamp>\_<run\_name>/}), \texttt{export\_active\_run()} (serializa el
+run activo de MLflow a \texttt{report.json}).
+
+\bpath{experiments/git.py}: Comprueba que el repositorio git esté limpio antes de
+lanzar un experimento (\texttt{check\_git\_clean()}), y registra el hash del commit activo en
+MLflow para garantizar reproducibilidad.
+
+\bpath{experiments/path_utils.py}: Centraliza las rutas de disco de cada experimento
+(directorios de resultados, datasets, directorios de exportación). Cualquier cambio en la
+organización de carpetas solo requiere modificar este fichero.
+
+\subsection{D.2 Experimento 1: Velocidad y precisión (MNIST)}
+
+\bpath{experiments/mnist_speed_loss/pytorch/train_pytorch_models.py}: Entrena el
+modelo base estándar PyTorch sobre MNIST con distintas fracciones del dataset (\texttt{half},
+\texttt{quarter}, \texttt{full}) y dos funciones de pérdida (\texttt{categorical\_crossentropy},
+\texttt{mse}). Guarda historia de entrenamiento (accuracy, loss, tiempo por epoch) como
+\texttt{.pkl}.
+
+\bpath{experiments/mnist_speed_loss/pytorch/train_qsimov_models.py}: Entrena
+\texttt{PytorchQsimovGradient} y \texttt{PytorchQsimovLinearSystem} sobre el mismo dataset.
+Comparte el PathSelector del modelo base (mismo \texttt{initial\_layer=-2}).
+
+\bpath{experiments/mnist_speed_loss/speed_loss_plots.py}: Genera gráficas HTML
+comparando accuracy y loss en función del tiempo de entrenamiento (eje X = tiempo en segundos) para
+los tres métodos. Usa Plotly para generar gráficas interactivas.
+
+\bpath{experiments/mnist_speed_loss/main.py}: Orquestador MLflow: lanza los tres
+scripts anteriores en orden, registra parámetros y copia los artefactos generados a
+\texttt{run\_exports/}.
+
+\subsection{D.3 Experimento 2: Robustez al learning rate (MNIST)}
+
+\bpath{experiments/mnist_learning_rate/train_pytorch_qsimov_models.py}: Itera
+sobre 6 valores de learning rate, entrenando para cada uno tanto el modelo estándar PyTorch como
+\texttt{PytorchQsimovGradient}. Registra la accuracy final en test para cada combinación.
+
+\bpath{experiments/mnist_learning_rate/learning_rate_plots.py}: Genera gráficas de
+accuracy en función del learning rate (escala logarítmica) y curvas de entrenamiento por epoch para
+cada LR.
+
+\bpath{experiments/mnist_learning_rate/main.py}: Orquestador MLflow del experimento.
+
+\subsection{D.4 Experimentos de olvido catastrófico (MNIST y CIFAR-10)}
+
+\bpath{experiments/mnist_forgetting/pytorch_train_base_model.py} y
+\bpath{experiments/cifar10_forgetting/pytorch_train_base_model.py}: Entrenan el
+modelo base sobre la fase 1 (clases 0--4) y guardan el modelo en disco.
+
+\bpath{experiments/mnist_forgetting/pytorch_run_forgetting.py} y
+\bpath{experiments/cifar10_forgetting/pytorch_run_forgetting.py}: Ejecutan todos
+los métodos de actualización (QsimovLinearSystem acumulado, QsimovGradient, fine-tuning estándar,
+re-entrenamiento acumulado) sobre la fase 2 (clases 5--9) y evalúan la accuracy en ambos conjuntos
+de clases.
+
+{\tolerance=9999\relax
+\bpath{experiments/mnist_forgetting/plot_forgetting.py} y
+\bpath{experiments/cifar10_forgetting/plot_forgetting.py}:
+Generan gráficas de barras comparando accuracy en clases antiguas vs.\ nuevas para cada método.
+\par}
+
+\subsection{D.5 Experimentos de ImageNet}
+
+\bpath{experiments/imagenet_subset_by_splits/train_pytorch.py}: Entrena el
+clasificador estándar VGG16 (base convolucional congelada, top ancho 25088$\rightarrow$4096$\rightarrow$4096$\rightarrow$100)
+con distintos tamaños de split.
+
+\bpath{experiments/imagenet_subset_by_splits/train_pytorch_qsimov.py}: Entrena el
+PathSelector VGG16 (top estrecho 25088$\rightarrow$2048$\rightarrow$128$\rightarrow$100) y
+\texttt{PytorchQsimovGradient} para cada split.
+
+\bpath{experiments/imagenet_continual_learning/train_pytorch_qsimov.py}: Implementa
+el escenario de 4 rondas de 25 clases nuevas: entrena \texttt{QsimovLinearSystem} con acumulación
+de ecuaciones entre rondas, \texttt{QsimovLinearSystem} con reset, y \texttt{QsimovGradient}.
+
+\bpath{experiments/imagenet_streaming_incremental/train_pytorch_streaming.py}:
+Simula el escenario de streaming: 20 batches de 5 clases nuevas cada uno. Para cada batch entrena
+los 4 métodos comparados y evalúa sobre el test set acumulado.
+
+\bpath{experiments/initial_layer_sweep/train_pytorch_sweep.py}: Prueba distintos
+valores de \texttt{initial\_layer} sobre VGG16, midiendo número de caminos generados, tiempo de
+construcción del PathSelector, tiempo de entrenamiento y precisión final.

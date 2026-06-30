@@ -1,0 +1,218 @@
+% Capítulo 4: Desarrollo del Proyecto
+
+\section{Análisis del sistema}
+
+\subsection{Formalización matemática de los caminos}
+
+Sea una red neuronal feed-forward con activación ReLU. Para una entrada $x \in \mathbb{R}^n$, la
+activación de cada neurona en cada capa es no-negativa (por definición de ReLU). Se dice que la
+neurona $j$ de la capa $l$ está \textbf{activa} para $x$ si su pre-activación es estrictamente
+positiva, e \textbf{inactiva} si es cero.
+
+Un \textbf{camino} (\textit{path}) $p = (j_0, j_1, \ldots, j_L)$ es una secuencia de índices de
+neuronas, una por capa, tal que la neurona $j_l$ de la capa $l$ está conectada con la neurona
+$j_{l+1}$ de la capa $l+1$. El \textbf{valor del coeficiente} de un camino para una entrada $x$ es
+el producto de:
+\begin{itemize}
+  \item La activación de la neurona de entrada del camino (neurona $j_0$), y
+  \item El indicador de actividad de cada neurona intermedia (1 si activa, 0 si no).
+\end{itemize}
+
+Dado el conjunto de todos los caminos posibles entre la capa \texttt{initial\_layer} y la salida, y
+dado un conjunto de muestras $\{(x_i, y_i)\}$, el sistema lineal $Ax = b$ se construye de la
+siguiente forma:
+\begin{itemize}
+  \item Cada fila de $A$ corresponde a una muestra $x_i$ y contiene los coeficientes de los
+        caminos activos para esa muestra.
+  \item $b$ contiene las salidas deseadas $y_i$.
+  \item $x$ son los pesos de los caminos (incógnitas del problema).
+\end{itemize}
+
+La solución $x^*$ del sistema proporciona los pesos óptimos que minimizan el error cuadrático entre
+la salida de la red reconstruida y las salidas deseadas.
+
+\subsection{Casos de uso principales}
+
+\paragraph{CU-01: Entrenar Qsimov (primera ronda)}
+\begin{itemize}
+  \item Actor: usuario de la librería
+  \item Precondición: modelo Keras/PyTorch pre-entrenado disponible
+  \item Flujo: (1) crear \texttt{PathSelector} con \texttt{initial\_layer}, (2) crear
+        \texttt{QsimovLinearSystem}, (3) llamar a \texttt{fit(X\_train, Y\_train)}
+  \item Postcondición: \texttt{solutions\_} contiene los pesos de los caminos resolventes
+\end{itemize}
+
+\paragraph{CU-02: Actualizar el modelo sin olvido (ronda N)}
+\begin{itemize}
+  \item Actor: usuario
+  \item Precondición: \texttt{QsimovLinearSystem} entrenado en rondas anteriores
+  \item Flujo: llamar a \texttt{fit(X\_nueva, Y\_nueva)}, \textit{sin} llamar
+        previamente a \texttt{reset\_equations()}
+  \item Postcondición: \texttt{solutions\_} incorpora todas las muestras de todas las rondas
+\end{itemize}
+
+\paragraph{CU-03: Predecir con el modelo actualizado}
+\begin{itemize}
+  \item Actor: usuario
+  \item Precondición: \texttt{QsimovLinearSystem} con \texttt{solutions\_} calculadas
+  \item Flujo: llamar a \texttt{predict(X\_test)}
+  \item Postcondición: se devuelven las predicciones del modelo Qsimov
+\end{itemize}
+
+\paragraph{CU-04: Guardar y recuperar el modelo}
+\begin{itemize}
+  \item Actor: usuario
+  \item Guardar: \texttt{qls.save("modelo.qsi")} \\
+        Recuperar: \texttt{qls = KerasQsimov\-Linear\-System.load("modelo.qsi")}
+\end{itemize}
+
+\subsection{Modelado de datos}
+
+Los datos que gestiona el sistema son:
+\begin{itemize}
+  \item \texttt{all\_paths\_}: lista de arrays numpy de forma \texttt{(n\_paths\_layer, path\_length)},
+        los índices que forman cada camino entre capas.
+  \item \texttt{output\_masks\_}: array booleano
+        \texttt{(n\_outputs, n\_paths\_total)};
+        indica qué caminos llegan a cada neurona de salida.
+  \item \texttt{equations\_}: lista de sistemas \texttt{[A, b]} por output, donde \texttt{A} tiene
+        forma \texttt{(n\_equations, n\_paths\_output)}.
+  \item \texttt{solutions\_}: lista de arrays numpy de forma \texttt{(n\_paths\_output,)},
+        pesos de los caminos resueltos.
+\end{itemize}
+
+\section{Diseño del sistema}
+
+\subsection{Diseño de interfaces de usuario}
+
+La API pública de la librería está diseñada para ser coherente con las convenciones de scikit-learn
+(\texttt{fit} / \texttt{predict}) y extensible a nuevos frameworks. La interfaz mínima para el
+usuario es:
+
+\begin{lstlisting}[language=Python, caption={API mínima -- variante Keras.}]
+# Keras
+from qsimov.keras_path_selector import KerasPathSelector
+from qsimov.keras_qsimov_linear_system import (
+    KerasQsimovLinearSystem)
+
+path_selector = KerasPathSelector(model, initial_layer=-1)
+qls = KerasQsimovLinearSystem(
+    path_selector, solver="back_substitution")
+qls.fit(x_train, y_train)
+y_pred = qls.predict(x_test)
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={API mínima -- variante PyTorch.}]
+# PyTorch
+from qsimov.pytorch_path_selector import PytorchPathSelector
+from qsimov.pytorch_qsimov_gradient import PytorchQsimovGradient
+
+path_selector = PytorchPathSelector(
+    model, input_shape=(1, 28, 28), initial_layer=-4)
+qg = PytorchQsimovGradient(path_selector)
+qg.fit(x_train, y_train, epochs=5,
+       optimizer=lambda p: torch.optim.Adam(p, lr=1e-3))
+\end{lstlisting}
+
+\subsection{Diseño de procesos: extracción de caminos}
+
+El proceso de extracción de caminos para una capa densa con matriz de pesos
+$W \in \mathbb{R}^{m \times n}$ funciona de la siguiente forma:
+
+\begin{enumerate}
+  \item Para cada neurona de entrada $i$ (incluyendo el bias como neurona $0$): se recorren todas
+        las neuronas de salida $j$ con $W[i, j] \neq 0$. Cada par $(i, j)$ constituye un camino
+        elemental de longitud 2.
+  \item Los caminos de capas sucesivas se combinan mediante \path{combine_paths_left_right}: se
+        hace un join de los caminos izquierdos y derechos donde el último índice del camino
+        izquierdo coincide con el primero del camino derecho. Los caminos de bias (con primer índice
+        0) siempre se incluyen.
+  \item El proceso se repite para todas las capas del \texttt{right\_model\_}, acumulando los
+        caminos mediante combinación.
+\end{enumerate}
+
+Para capas convolucionales, cada posición del mapa de características y cada canal de salida genera
+sus propios caminos, aplicando las transformaciones de stride y padding correspondientes.
+
+\subsection{Diseño de la base de datos (persistencia)}
+
+El formato de persistencia \texttt{.qsi} es un directorio con la siguiente estructura:
+
+\begin{lstlisting}[caption={Estructura del directorio de persistencia \texttt{.qsi}.}]
+modelo.qsi/
+|-- py_objects.pkl           <- atributos escalares y listas (pickle)
+|-- numpy_variables.npz      <- arrays numpy comprimidos (np.savez_compressed)
+|-- left_model.h5 / .pt      <- left_model_ del PathSelector
+|-- right_model.h5 / .pt     <- right_model_ del PathSelector
+`-- path_selector.qsi/       <- PathSelector anidado
+    |-- py_objects.pkl
+    `-- numpy_variables.npz
+\end{lstlisting}
+
+Esta estructura separa los arrays numpy de gran tamaño (como \texttt{all\_paths\_} o
+\texttt{equations\_}) del resto de atributos de Python, permitiendo una carga eficiente sin
+deserializar objetos que no sean necesarios.
+
+\section{Arquitectura interna de Qsimov}
+
+\subsection{Módulo \texttt{paths/}: Generación de caminos (Python + Cython)}
+
+Las operaciones de mayor coste computacional en la generación de caminos están implementadas en
+Cython (\texttt{c\_paths.pyx}, \texttt{c\_combine.pyx}, \texttt{c\_dense.pyx},
+\texttt{c\_conv.pyx}, \texttt{c\_maxpooling.pyx}). Cython se eligió sobre alternativas como NumPy
+vectorizado o C puro porque las operaciones implican bucles anidados sobre arrays de longitud
+variable con lógica de control compleja, donde la vectorización NumPy no es directamente aplicable.
+
+La función central \texttt{c\_non\_zero\_input\_select\_paths} filtra, para cada muestra, los
+caminos cuya neurona de entrada tiene activación no-nula. Su signatura en Cython es:
+
+\begin{lstlisting}[language=C, caption={Signatura de \texttt{c\_non\_zero\_input\_select\_paths}.}]
+def c_non_zero_input_select_paths(
+    float[:] flat_inputs_with_bias,   # activaciones de entrada, con bias prepend
+    long[:, :] all_paths,             # todos los caminos posibles
+) -> tuple[np.ndarray, np.ndarray]:  # (selected_paths, select_mask)
+\end{lstlisting}
+
+\subsection{Módulo \texttt{linalg.py}: Resolución del sistema}
+
+El sistema lineal se resuelve siguiendo estos pasos:
+
+\begin{enumerate}
+  \item \textbf{Transformación QR} (\texttt{r\_transform}): Se aplica la factorización QR con
+        \texttt{numpy.linalg.qr(mode="r")} para obtener la matriz triangular superior $R$. Esto
+        reduce el sistema acumulado, que puede tener miles de ecuaciones, a un sistema cuadrado
+        de tamaño $n_{paths} \times n_{paths}$, manteniendo solo la información relevante.
+  \item \textbf{Back-substitution} (\texttt{c\_back\_substitution}): Se resuelve
+        $R \cdot x = Q^T \cdot b$ hacia atrás. Se aplican cutoffs absoluto y relativo para tratar
+        los coeficientes casi-nulos como cero exacto, lo que mejora la estabilidad numérica.
+  \item \textbf{Shrinkage incremental}: El parámetro \texttt{qr\_shrinkage\_factor} controla cada
+        cuántas filas nuevas se aplica la transformación QR para comprimir el sistema en memoria.
+\end{enumerate}
+
+La variante de mínimos cuadrados (\texttt{solver="lstsq"}) delega directamente en
+\texttt{numpy.linalg.lstsq}, útil cuando el sistema está sub-determinado (más incógnitas que
+ecuaciones).
+
+\subsection{Diferencias de implementación entre Keras y PyTorch}
+
+Las dos implementaciones comparten las clases base abstractas \texttt{PathSelector} y
+\texttt{QsimovLinearSystem}, pero difieren en los siguientes puntos:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Diferencias entre las variantes Keras y PyTorch de Qsimov.}
+  \label{tab:tabla1}
+  \begin{tabular}{p{5cm}p{4.5cm}p{4.5cm}}
+    \toprule
+    \textbf{Aspecto} & \textbf{Keras} & \textbf{PyTorch} \\
+    \midrule
+    Inferencia del \texttt{input\_shape}  & Automática (el modelo lo infiere) & Manual (parámetro requerido) \\
+    Formato de pesos Dense                & $W \in \mathbb{R}^{in \times out}$ & $W \in \mathbb{R}^{out \times in}$ (se transpone) \\
+    Formato de datos conv                 & \texttt{channels\_last}            & \texttt{channels\_first} \\
+    Iterador de batches                   & \path{as_tensorflow_dataset()}  & \path{as_pytorch_dataloader()} \\
+    Dispositivo del right model           & Siempre CPU (por diseño)           & Siempre CPU (por diseño) \\
+    Guardado del modelo                   & Formato \texttt{.h5}               & Formato \texttt{.pt} \\
+    Indexación de \texttt{initial\_layer} & Solo capas Dense/Conv (ReLU y Dropout no cuentan) & Todas las capas, incluidas ReLU y Dropout \\
+    \bottomrule
+  \end{tabular}
+\end{table}
