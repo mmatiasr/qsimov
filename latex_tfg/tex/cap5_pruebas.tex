@@ -2,8 +2,9 @@
 
 \section{Descripción de experimentos}
 
-Para la validación de Qsimov se han diseñado cinco experimentos, ordenados de menor a mayor
-complejidad del dataset y del escenario evaluado.
+Para la validación de Qsimov se han diseñado cinco grupos de experimentos, ordenados de menor a
+mayor complejidad del dataset y del escenario evaluado. El quinto grupo, sobre ImageNet-100, se
+desglosa en cuatro sub-experimentos que cubren distintos aspectos del comportamiento de la librería.
 
 \subsection{Configuración experimental común}
 
@@ -249,43 +250,153 @@ mayor capacidad del gradiente estándar sobre toda la red compensa la regulariza
 Qsimov. El resultado confirma que la restricción estructural de Qsimov es una regularización
 implícita efectiva en el régimen de escasez de datos.
 
-\subsection{Experimento 5: Aprendizaje continual en ImageNet (100 clases)}
+\subsection{Experimento 5: ImageNet-100}
 
-\paragraph{Configuración} Subconjunto de 100 clases de ImageNet (130.000 imágenes de entrenamiento,
-$\sim$13.000 de test). Red base: VGG16~\cite{ref19} con la última capa adaptada a 100 clases
-(pre-entrenado sobre estas 100 clases desde cero). El escenario de aprendizaje continual divide los
-datos en 4 rondas de 25 clases nuevas cada una. Los cuatro métodos comparados fueron
-\texttt{qsimov\_linear\_accum}, \texttt{qsimov\_gradient}, \texttt{standard\_finetune} y
-\texttt{standard\_cumulative}.
+Los cuatro sub-experimentos de esta sección evalúan Qsimov sobre un subconjunto de 100 clases de
+ImageNet ($\sim$130.000 imágenes de entrenamiento, $\sim$13.000 de test). La red base es
+VGG16~\cite{ref19} con base convolucional congelada y clasificador estrecho
+(25088$\rightarrow$2048$\rightarrow$128$\rightarrow$100), pre-entrenado sobre estas 100 clases
+desde cero. Todos los sub-experimentos utilizan PyTorch sobre GPU.
+
+\paragraph{5a.~Aprendizaje continual incremental (4 rondas)}
+
+El escenario divide los datos en 4 rondas de 25 clases nuevas cada una. Se incluye el método
+\texttt{qsimov\_linear\_reset} (sistema lineal sin acumulación de ecuaciones entre rondas) como
+referencia interna para aislar el efecto de la acumulación.
 
 \begin{table}[htbp]
   \centering
-  \caption{Resultados globales del experimento de aprendizaje continual sobre ImageNet (100 clases).}
+  \caption{Precisión global por ronda en el experimento de aprendizaje continual (ImageNet-100).}
   \label{tab:tabla6}
-  \begin{tabular}{lcc}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lccccc}
     \toprule
-    \textbf{Método} & \textbf{Acc. global (\%)} & \textbf{Tiempo total (s)} \\
+    \textbf{Método} & \textbf{Ronda 1 (\%)} & \textbf{Ronda 2 (\%)} & \textbf{Ronda 3 (\%)} & \textbf{Ronda 4 (\%)} & \textbf{Tiempo total (s)} \\
     \midrule
-    \texttt{qsimov\_linear\_accum}       & \textbf{37.0} & \textbf{113} \\
-    \texttt{standard\_cumulative} (acum.)& 23.0          & 655 \\
-    \texttt{standard\_finetune}          & 20.8          & --- \\
-    \texttt{qsimov\_gradient}            &  2.5          & --- \\
+    \texttt{qsimov\_linear\_accum}  & \textbf{14.9} & \textbf{23.7} & \textbf{29.3} & \textbf{37.0} & \textbf{113.5} \\
+    \texttt{qsimov\_linear\_reset}  & 14.9 & 13.9 & 13.8 & 16.2 & 116.6 \\
+    \texttt{standard\_finetune}     & 19.7 & 19.8 & 20.0 & 20.8 & 261.6 \\
+    \texttt{standard\_cumulative}   & 19.7 & 20.9 & 21.5 & 23.0 & 654.7 \\
+    \texttt{qsimov\_gradient}       &  1.5 &  2.3 &  3.1 &  2.5 & 208.8 \\
     \bottomrule
-  \end{tabular}
+  \end{tabular}}%
 \end{table}
 
-Qsimov con acumulación de ecuaciones supera al re-entrenamiento acumulado en precisión global
-(37.0\,\% vs.\ 23.0\,\%) y lo hace seis veces más rápido (113\,s vs.\ 655\,s). La preservación del
-conocimiento entre rondas es notable: la precisión en las rondas anteriores se mantiene entre el
-79\,\% y el 84\,\% a lo largo de todo el experimento.
+La tabla~\ref{tab:tabla6_clases} desglosa la precisión al final de la ronda 4 por grupo de clases,
+midiendo directamente el grado de olvido de cada método:
 
-El módulo de gradiente de Qsimov no converge en este escenario (2.5\,\% global): con 100 clases y
-un learning rate reducido, el método iterativo requeriría muchas más epochs de las utilizadas. Esta
-es una limitación identificada del componente de gradiente en problemas de alta complejidad.
+\begin{table}[htbp]
+  \centering
+  \caption{Precisión por grupo de clases al final de la ronda 4 (ImageNet-100). Demuestra el no-olvido.}
+  \label{tab:tabla6_clases}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Método} & \textbf{Clases R1 (\%)} & \textbf{Clases R2 (\%)} & \textbf{Clases R3 (\%)} & \textbf{Clases R4 (\%)} \\
+    \midrule
+    \texttt{qsimov\_linear\_accum} & \textbf{84.1} & \textbf{82.2} & \textbf{79.4} & \textbf{83.1} \\
+    \texttt{qsimov\_linear\_reset} &  0.0 &  0.0 &  0.0 & 96.6 \\
+    \texttt{standard\_finetune}    & 23.5 & 21.4 & 16.2 & 44.7 \\
+    \texttt{standard\_cumulative}  & 31.8 & 28.3 & 18.6 & 42.0 \\
+    \texttt{qsimov\_gradient}      &  0.3 &  0.3 &  2.7 &  7.3 \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+\texttt{qsimov\_linear\_accum} es el único método que mantiene alta precisión en todas las rondas
+simultáneamente (79--84\,\%), terminando con un 37.0\,\% global frente al 23.0\,\% del
+re-entrenamiento acumulado, en 113.5\,s frente a los 654.7\,s del \texttt{cumulative}
+($5.8\times$ más rápido). \texttt{qsimov\_linear\_reset}, al no acumular ecuaciones, olvida
+completamente las clases de rondas anteriores (0.0\,\% en R1--R3 al final de la ronda 4). El módulo
+de gradiente no converge (2.5\,\% global): con 100 clases y LR$=1\times10^{-5}$, requeriría muchas
+más epochs de las utilizadas.
+
+\paragraph{5b.~Streaming incremental (20 batches de 5 clases)}
+
+Este sub-experimento simula el escenario más continuo: los datos llegan en 20 batches de 5 clases
+nuevas cada uno. El conjunto de test crece con cada batch, por lo que la precisión desciende
+naturalmente a medida que se acumulan clases aún no vistas.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Precisión sobre el test acumulado en batches seleccionados (ImageNet-100, streaming).}
+  \label{tab:tabla7}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lcccccc}
+    \toprule
+    \textbf{Método} & \textbf{Batch 1 (\%)} & \textbf{Batch 5 (\%)} & \textbf{Batch 10 (\%)} & \textbf{Batch 15 (\%)} & \textbf{Batch 20 (\%)} & \textbf{Tiempo B20 (s)} \\
+    \midrule
+    \texttt{qsimov\_linear\_accum} & \textbf{73.2} & \textbf{59.5} & \textbf{47.6} & \textbf{39.4} & \textbf{37.1} & \textbf{5.8} \\
+    \texttt{standard\_finetune}    & 15.6 & 25.7 & 22.2 & 17.8 & 21.8 &   7.4 \\
+    \texttt{standard\_cumulative}  & 14.8 & 27.5 & 24.0 & 19.8 & 22.9 & 142.3 \\
+    \texttt{qsimov\_gradient}      &  0.0 &  2.2 &  0.9 &  1.1 &  1.5 &   6.2 \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+\texttt{qsimov\_linear\_accum} lidera en todos los batches. El descenso de 73.2\,\% a 37.1\,\% no
+refleja olvido, sino el crecimiento del test set con clases aún no vistas. El dato más relevante
+para la escalabilidad es el tiempo: mientras \texttt{cumulative} necesita 142.3\,s en el batch 20,
+\texttt{qsimov\_linear\_accum} mantiene un tiempo constante de $\approx$5.8\,s por batch
+independientemente del número de clases acumuladas.
+
+\paragraph{5c.~Barrido de \texttt{initial\_layer}}
+
+Se evalúa qué valores de \texttt{initial\_layer} son válidos en VGG16. Solo las capas Dense o
+Conv son válidas; las capas de activación (ReLU, Dropout) no tienen pesos propios y la librería
+las rechaza con un error.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados del barrido de \texttt{initial\_layer} en VGG16 (ImageNet-100).}
+  \label{tab:tabla8}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{llccc}
+    \toprule
+    \textbf{\texttt{initial\_layer}} & \textbf{Capa} & \textbf{$n_{\mathrm{paths}}$} & \textbf{Acc.\ lineal (\%)} & \textbf{Acc.\ gradiente (\%)} \\
+    \midrule
+    $-2$ & \texttt{Linear(2048}$\rightarrow$\texttt{128)} & 12.900 & 37.02 & 5.96 \\
+    $-3$ & \texttt{ReLU(128)} & --- & --- & --- \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+El valor $-3$ apunta a una capa ReLU y es rechazado por la librería. Con $-2$ se generan 12.900
+caminos (129 por clase de salida), proporcionando suficiente capacidad representacional para el
+escenario de 100 clases.
+
+\paragraph{5d.~Comparativa de splits}
+
+Se compara el clasificador estándar VGG16 (top ancho, 25088$\rightarrow$4096$\rightarrow$4096$\rightarrow$100)
+frente al PathSelector estrecho (25088$\rightarrow$2048$\rightarrow$128$\rightarrow$100) y frente a
+\texttt{QsimovGradient}, variando el tamaño del split de entrenamiento (10 epochs en todos los casos).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Precisión en test según el tamaño del split de entrenamiento (ImageNet-100, GPU, 10 epochs).}
+  \label{tab:tabla9}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{cccc}
+    \toprule
+    \textbf{Muestras} & \textbf{VGG16 estándar (\%)} & \textbf{PathSelector (\%)} & \textbf{\texttt{QsimovGradient} (\%)} \\
+    \midrule
+    1.000  & 12.72 & \textbf{14.86} & 9.87 \\
+    5.000  &  8.26 & \textbf{16.86} & 8.78 \\
+    10.000 &  7.32 & \textbf{17.32} & 9.57 \\
+    $\sim$40.000 (completo) & 5.20 & --- & --- \\
+    \bottomrule
+  \end{tabular}}%
+\end{table}
+
+El PathSelector supera al VGG16 estándar en todos los splits, con una ventaja que crece con más
+datos (17.32\,\% vs.\ 7.32\,\% con 10.000 muestras). El VGG16 estándar empeora con más datos
+porque su clasificador ancho no converge bien con 10 epochs sobre un dataset de 100 clases.
+\texttt{QsimovGradient} no supera al PathSelector base ($\approx$9.6\,\%), confirmando que
+LR$=1\times10^{-5}$ y 10 epochs son insuficientes en este escenario.
 
 \section{Resultados y discusión}
 
-Los cinco experimentos permiten extraer las siguientes conclusiones cuantitativas:
+Los experimentos permiten extraer las siguientes conclusiones cuantitativas:
 
 \begin{enumerate}
   \item El sistema lineal de Qsimov elimina el olvido catastrófico en todos los escenarios
@@ -307,10 +418,12 @@ Los cinco experimentos permiten extraer las siguientes conclusiones cuantitativa
         generados y la complejidad intrínseca del problema, lo que convierte al
         \texttt{initial\_layer} en el hiperparámetro más crítico del sistema.
 
-  \item El sistema lineal es más rápido que el re-entrenamiento estándar tanto en escenarios de re-entrenamiento puro ($\times 22$ en MNIST respecto al
-        entrenamiento estándar completo; $\times 9$ en CIFAR-10 respecto al re-entrenamiento
-        acumulado) como en aprendizaje continual ($\times 10$ en MNIST respecto al re-entrenamiento
-        acumulado; $\times 6$ en ImageNet).
+  \item El sistema lineal es más rápido que el re-entrenamiento estándar en todos los
+        escenarios: $\times 22$ en MNIST (re-entrenamiento puro), $\times 10$ en MNIST continual,
+        $\times 6$ en ImageNet (4 rondas) y $\times 24$ en el escenario de streaming de ImageNet
+        (5.8\,s vs.\ 142.3\,s en el batch 20). En el caso del streaming, el tiempo de actualización
+        permanece constante independientemente del número de clases acumuladas, mientras que el
+        re-entrenamiento acumulado crece con cada nueva ronda.
 
   \item El módulo de gradiente es una regularización implícita efectiva en regímenes de
         escasez de datos: con 100 muestras en CIFAR-10, \texttt{qsimov\_gradient} supera al
@@ -322,6 +435,17 @@ Los cinco experimentos permiten extraer las siguientes conclusiones cuantitativa
         complejidad (MNIST: 94--98\,\% en todo el rango de LRs evaluado) pero no escala bien a
         problemas de alta complejidad (ImageNet, 100 clases: 2.5\,\% global con
         LR$=1\times 10^{-5}$ y 10 epochs).
+
+  \item El \texttt{initial\_layer} está restringido a capas Dense o Conv: el valor $-3$ en
+        VGG16 apunta a una capa ReLU y la librería lo rechaza. Con $-2$
+        (\texttt{Linear(2048}$\rightarrow$\texttt{128)}) se generan 12.900 caminos, que resultan
+        suficientes para el escenario de 100 clases.
+
+  \item El PathSelector estrecho supera al clasificador estándar VGG16 en todos los splits de
+        ImageNet evaluados (hasta 17.32\,\% vs.\ 7.32\,\% con 10.000 muestras), porque su top
+        estrecho converge mejor que el ancho con pocos epochs. \texttt{QsimovGradient} no mejora
+        al PathSelector base en este escenario, confirmando la limitación del módulo de gradiente
+        en alta complejidad con pocos epochs.
 \end{enumerate}
 
 \section{Evaluación presupuestaria}
